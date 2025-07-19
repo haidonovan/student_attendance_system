@@ -17,6 +17,8 @@
 // ===========================================================
 
 
+"use client"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -35,6 +37,13 @@ import {
 import { ThemeToggle } from "@/components/userDefine/ThemeToggle/ThemeToggle"
 
 export default function HomePage() {
+
+  // Route to dash board
+  const router = useRouter();
+
+  // Variable point to Login
+  const login_route = "/login";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Header */}
@@ -69,7 +78,7 @@ export default function HomePage() {
             <Button variant="outline" className="mr-2 bg-transparent dark:border-gray-600 dark:text-gray-300">
               Sign In
             </Button>
-            <Button>Get Started</Button>
+            <Button onClick={() => router.push(login_route)}>Get Started</Button>
           </nav>
         </div>
       </header>
@@ -89,7 +98,7 @@ export default function HomePage() {
             seamless integration for educational institutions.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="text-lg px-8 py-6">
+            <Button size="lg" className="text-lg px-8 py-6" onClick={()=> router.push(login_route)}>
               Start Free Trial
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
@@ -97,6 +106,7 @@ export default function HomePage() {
               variant="outline"
               size="lg"
               className="text-lg px-8 py-6 bg-transparent dark:border-gray-600 dark:text-gray-300"
+              onClick={() => router.push(login_route)}
             >
               Watch Demo
             </Button>

@@ -30,10 +30,20 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
+import { useRouter } from "next/navigation"
+import { ThemeToggle } from "./userDefine/ThemeToggle/ThemeToggle"
+
 export function NavUser({
   user
 }) {
   const { isMobile } = useSidebar()
+  const router = useRouter();
+
+    function handleLogout() {
+    // TODO: add your logout logic here (e.g. clear auth tokens)
+
+    router.push("/login"); // 3. Redirect to login page
+  }
 
   return (
     <SidebarMenu>
@@ -51,8 +61,10 @@ export function NavUser({
                 <span className="truncate font-medium">{user.name}</span>
                 <span className="truncate text-xs">{user.email}</span>
               </div>
+              
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
+            
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
@@ -69,6 +81,7 @@ export function NavUser({
                   <span className="truncate font-medium">{user.name}</span>
                   <span className="truncate text-xs">{user.email}</span>
                 </div>
+                <ThemeToggle/>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -94,7 +107,7 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
               <LogOut />
               Log out
             </DropdownMenuItem>
