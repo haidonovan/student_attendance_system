@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSession } from "next-auth/react"
 import {
   AudioWaveform,
   BookOpen,
@@ -159,6 +160,14 @@ const data = {
 export function AppSidebar({
   ...props
 }) {
+
+  const {data: session, status } = useSession();
+
+  const user = {
+    name: session?.user?.name || "Guest",
+    email: session?.user?.email || "unknown@email.com",
+    avatar: session?.user?.image || "/avatars/placeholder.jpg",
+  }
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -169,7 +178,7 @@ export function AppSidebar({
         <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

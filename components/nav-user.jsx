@@ -32,6 +32,7 @@ import {
 
 import { useRouter } from "next/navigation"
 import { ThemeToggle } from "./userDefine/ThemeToggle/ThemeToggle"
+import SignOutDropdownItem from "./sessionwrapper/signOut/SignOutButton"
 
 export function NavUser({
   user
@@ -107,10 +108,13 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
+            {/* <DropdownMenuItem onClick={handleLogout}>
               <LogOut />
               Log out
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
+{/* SIGN OUT BUTTON */}
+              <SignOutDropdownItem/>
+
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

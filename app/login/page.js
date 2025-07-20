@@ -11,6 +11,9 @@ import { Users, Eye, EyeOff, Mail, Lock, GraduationCap, BookOpen, BarChart3, Clo
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
+// SIGN IN BUTTON
+import SignInButton from "@/components/sessionwrapper/signIn/SignInButton"
+
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
@@ -213,7 +216,7 @@ export default function LoginPage() {
 
                 {/* Social Login Options */}
                 <div className="space-y-3">
-                  <Button
+                  {/* <Button
                     variant="outline"
                     className="w-full h-12 bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
                   >
@@ -236,7 +239,8 @@ export default function LoginPage() {
                       />
                     </svg>
                     Continue with Google
-                  </Button>
+                  </Button> */}
+                  <SignInButton/>
 
                   <Button
                     variant="outline"
