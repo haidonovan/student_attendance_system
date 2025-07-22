@@ -125,3 +125,15 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* globals.css slowl change theme from dark to white from white to dark*/
+html,
+body {
+  transition: background-color 1s ease, color 1s ease;
+}
+
+* {
+  transition: background-color 1s ease, color 1s ease, border-color 1s ease;
+}
+
+/* ============== DO NOT TOUCH ============== */

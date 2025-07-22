@@ -53,23 +53,38 @@ const data = {
   ],
   navMain: [
     {
-      title: "Playground",
+      title: "Teacher dashboard",
       url: "#",
       icon: SquareTerminal,
       isActive: true,
       items: [
         {
+          title: "General",
+          url: "/dashboard/teacher",
+        },
+        {
+          title: "Check Attendance",
+          url: "check-attendance",
+        },
+        {
+          title: "Class",
+          url: "/dashboard/class",
+        },
+        { title: "Report",
+          url: "/dashboard/report"
+        },
+        {
           title: "History",
-          url: "#",
+          url: "/dashboard/history",
         },
         {
-          title: "Starred",
-          url: "#",
+          title: "Student",
+          url: "/dashboard/student-attendance",
         },
         {
-          title: "Settings",
-          url: "#",
-        },
+          title: "Student Dashboard",
+          url: "/dashboard/student-dashboard",
+        }
       ],
     },
     {
@@ -78,7 +93,7 @@ const data = {
       icon: Bot,
       items: [
         {
-          title: "Genesis",
+          title: "Admin Dashboard",
           url: "#",
         },
         {
