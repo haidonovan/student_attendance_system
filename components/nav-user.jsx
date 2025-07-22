@@ -1,3 +1,11 @@
+// NavUser.jsx
+// This is the user account menu:
+// Shows avatar, name, email
+// Has a dropdown with profile, notifications, billing, logout
+// Also includes a custom <ThemeToggle /> component
+
+
+
 "use client"
 
 import {

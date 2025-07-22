@@ -1,3 +1,12 @@
+// 3. NavProjects.jsx
+// This shows project-based navigation:
+// Each project has actions like View, Share, Delete
+// Ends with a "More" button (placeholder for additional items)
+
+
+
+
+
 "use client"
 
 import { Folder, Forward, MoreHorizontal, Trash2 } from "lucide-react";

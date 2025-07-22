@@ -1,3 +1,12 @@
+// TeamSwitcher.jsx
+// Dropdown for switching between teams (Acme Inc, Evil Corp, etc.)
+// Click opens a dropdown menu with team selection
+// Shows team logo, name, and plan
+// Stores selected team in activeTeam state
+
+
+
+
 "use client"
 
 import * as React from "react"
@@ -200,17 +209,22 @@ export function AppSidebar({
     avatar: session?.user?.image || "/avatars/placeholder.jpg",
   }
   return (
+    // show all the left side bar
     <Sidebar collapsible="icon" {...props}>
+      {/* header upper */}
       <SidebarHeader>
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
+      {/* middle all the content student teacher admin */}
       <SidebarContent>
         <NavMain items={data.navMain} />
         <NavProjects projects={data.projects} />
       </SidebarContent>
+      {/* show the profile billing so on */}
       <SidebarFooter>
         <NavUser user={user} />
       </SidebarFooter>
+      {/* icon to collapse side bar */}
       <SidebarRail />
     </Sidebar>
   );

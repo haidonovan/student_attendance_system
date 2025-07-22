@@ -1,3 +1,13 @@
+// 2. NavMain.jsx
+// This renders the main navigation menu:
+// Loops through items from data.navMain
+// Each main section (Teacher dashboard, Admin, etc.) is collapsible
+// Inside each section are sub-navigation links (like Check Attendance, Student Dashboard)
+
+// Icons and animations are added for good UX.
+
+
+
 "use client"
 
 import { ChevronRight } from "lucide-react";
