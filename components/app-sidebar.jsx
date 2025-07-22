@@ -88,21 +88,37 @@ const data = {
       ],
     },
     {
-      title: "Models",
-      url: "#",
+      title: "Admin",
+      url: "/dashboard/admin",
       icon: Bot,
       items: [
         {
           title: "Admin Dashboard",
-          url: "#",
+          url: "/dashboard/admin-dashboard/attendance",
         },
         {
-          title: "Explorer",
-          url: "#",
+          title: "Teachers",
+          url: "/dashboard/admin-dashboard/teachers",
         },
         {
-          title: "Quantum",
-          url: "#",
+          title: "Students",
+          url: "/dashboard/admin-dashboard/students",
+        },
+        {
+          title: "Class",
+          url: "/dashboard/admin-dashboard/class",
+        },
+        {
+          title: "Messaging & Alert",
+          url: "/dashboard/admin-dashboard/messaging",
+        },
+        {
+          title: "Reports",
+          url: "/dashboard/admin-dashboard/reports",
+        },
+        {
+          title: "Settings",
+          url: "/dashboard/admin-dashboard/settings",
         },
       ],
     },
