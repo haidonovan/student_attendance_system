@@ -8,6 +8,20 @@
 
 "use client"
 
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
+
 import {
   BadgeCheck,
   Bell,
@@ -41,6 +55,7 @@ import {
 import { useRouter } from "next/navigation"
 import { ThemeToggle } from "./userDefine/ThemeToggle/ThemeToggle"
 import SignOutDropdownItem from "./sessionwrapper/signOut/SignOutButton"
+import ProfileDemo from "@/app/dashboard/profile/page"
 
 export function NavUser({
   user
@@ -48,7 +63,7 @@ export function NavUser({
   const { isMobile } = useSidebar()
   const router = useRouter();
 
-    function handleLogout() {
+  function handleLogout() {
     // TODO: add your logout logic here (e.g. clear auth tokens)
 
     router.push("/login"); // 3. Redirect to login page
@@ -70,10 +85,10 @@ export function NavUser({
                 <span className="truncate font-medium">{user.name}</span>
                 <span className="truncate text-xs">{user.email}</span>
               </div>
-              
+
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
-            
+
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
@@ -90,7 +105,7 @@ export function NavUser({
                   <span className="truncate font-medium">{user.name}</span>
                   <span className="truncate text-xs">{user.email}</span>
                 </div>
-                <ThemeToggle/>
+                <ThemeToggle />
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -102,10 +117,16 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <BadgeCheck />
-                Account
-              </DropdownMenuItem>
+
+              
+                <DropdownMenuItem>
+                  <BadgeCheck />
+                  Account
+                </DropdownMenuItem>
+              
+
+
+
               <DropdownMenuItem>
                 <CreditCard />
                 Billing
@@ -120,8 +141,8 @@ export function NavUser({
               <LogOut />
               Log out
             </DropdownMenuItem> */}
-{/* SIGN OUT BUTTON */}
-              <SignOutDropdownItem/>
+            {/* SIGN OUT BUTTON */}
+            <SignOutDropdownItem />
 
           </DropdownMenuContent>
         </DropdownMenu>

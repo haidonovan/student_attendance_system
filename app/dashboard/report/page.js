@@ -184,9 +184,7 @@ export default function ReportsPage() {
   )
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
+<>
         {/* Header */}
         <header className="flex h-16 shrink-0 items-center justify-between gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-2 px-3 sm:px-4">
@@ -215,7 +213,7 @@ export default function ReportsPage() {
         </header>
 
         {/* Main Content */}
-        <div className="flex flex-1 flex-col gap-4 sm:gap-6 p-3 sm:p-4 lg:p-6 bg-gray-50 dark:bg-gray-900">
+        <div className="flex flex-1 flex-col gap-4 sm:gap-6 p-3 sm:p-4 lg:p-6 bg-gray-50 dark:bg-gray-950">
           {/* Page Title */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -689,7 +687,6 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+    </>
   )
 }

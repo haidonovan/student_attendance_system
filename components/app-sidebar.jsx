@@ -62,7 +62,7 @@ const data = {
   ],
   navMain: [
     {
-      title: "Teacher dashboard",
+      title: "Teacher",
       url: "#",
       icon: SquareTerminal,
       isActive: true,
@@ -79,20 +79,13 @@ const data = {
           title: "Class",
           url: "/dashboard/class",
         },
-        { title: "Report",
+        {
+          title: "Report",
           url: "/dashboard/report"
         },
         {
           title: "History",
           url: "/dashboard/history",
-        },
-        {
-          title: "Student",
-          url: "/dashboard/student-attendance",
-        },
-        {
-          title: "Student Dashboard",
-          url: "/dashboard/student-dashboard",
         }
       ],
     },
@@ -103,55 +96,48 @@ const data = {
       items: [
         {
           title: "Admin Dashboard",
-          url: "/dashboard/admin-dashboard/attendance",
+          url: "/dashboard/admin/attendance",
         },
         {
           title: "Teachers",
-          url: "/dashboard/admin-dashboard/teachers",
+          url: "/dashboard/admin/teachers",
         },
         {
           title: "Students",
-          url: "/dashboard/admin-dashboard/students",
+          url: "/dashboard/admin/students",
         },
         {
           title: "Class",
-          url: "/dashboard/admin-dashboard/class",
+          url: "/dashboard/admin/class",
         },
         {
           title: "Messaging & Alert",
-          url: "/dashboard/admin-dashboard/messaging",
+          url: "/dashboard/admin/messaging",
         },
         {
           title: "Reports",
-          url: "/dashboard/admin-dashboard/reports",
+          url: "/dashboard/admin/reports",
         },
         {
           title: "Settings",
-          url: "/dashboard/admin-dashboard/settings",
+          url: "/dashboard/admin/settings",
         },
       ],
     },
     {
-      title: "Documentation",
-      url: "#",
+      title: "Student",
+      url: "/dashboard/student",
       icon: BookOpen,
       items: [
         {
-          title: "Introduction",
-          url: "#",
+          title: "General",
+          url: "/dashboard/student/",
         },
         {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
+          title: "Student Attendance",
+          url: "/dashboard/student/attendance",
+        }
+
       ],
     },
     {
@@ -201,7 +187,7 @@ export function AppSidebar({
   ...props
 }) {
 
-  const {data: session, status } = useSession();
+  const { data: session, status } = useSession();
 
   const user = {
     name: session?.user?.name || "Guest",
