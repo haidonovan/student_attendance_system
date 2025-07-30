@@ -1,5 +1,31 @@
 "use client"
 
+
+
+
+
+// nav bar
+
+import { Separator } from "@/components/ui/separator"
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+
+import { SidebarTrigger } from "@/components/ui/sidebar"
+
+
+
+
+
+
+
+
+
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -291,7 +317,61 @@ export default function SystemSettings() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       {/* Header */}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
       <header className="sticky top-0 z-50 backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-700">
+
+
+        {/* Nav Bar and Icon */}
+        <div className="flex items-center gap-2 px-3 sm:px-4 m-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem className="hidden lg:block">
+                <BreadcrumbLink
+                  href="/dashboard"
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                >
+                  Dashboard
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden lg:block" />
+              <BreadcrumbItem className="hidden md:block">
+                <BreadcrumbLink
+                  href="/dashboard/platform"
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                >
+                  Platform
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="text-gray-900 dark:text-gray-100">General</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+
+
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -411,11 +491,10 @@ export default function SystemSettings() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors border-b-2 ${
-                      activeTab === tab.id
+                    className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors border-b-2 ${activeTab === tab.id
                         ? "border-slate-600 text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700/50"
                         : "border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-700/30"
-                    }`}
+                      }`}
                   >
                     <Icon className="w-4 h-4" />
                     {tab.label}
@@ -723,11 +802,10 @@ export default function SystemSettings() {
                     >
                       <div className="flex items-center gap-4">
                         <div
-                          className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                            backup.status === "Success"
+                          className={`w-10 h-10 rounded-lg flex items-center justify-center ${backup.status === "Success"
                               ? "bg-emerald-100 dark:bg-emerald-900/20"
                               : "bg-red-100 dark:bg-red-900/20"
-                          }`}
+                            }`}
                         >
                           {backup.status === "Success" ? (
                             <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />

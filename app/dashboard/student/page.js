@@ -1,5 +1,20 @@
 "use client"
 
+// nav bar
+
+import { Separator } from "@/components/ui/separator"
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+
+import { SidebarTrigger } from "@/components/ui/sidebar"
+
+
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -202,6 +217,47 @@ export default function StudentDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-white/10 dark:bg-gray-900/10 border-b border-white/20 dark:border-gray-700/50">
+
+
+
+
+        {/* Nav Bar and Icon */}
+        <div className="flex items-center gap-2 px-3 sm:px-4 m-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem className="hidden lg:block">
+                <BreadcrumbLink
+                  href="/dashboard"
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                >
+                  Dashboard
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden lg:block" />
+              <BreadcrumbItem className="hidden md:block">
+                <BreadcrumbLink
+                  href="/dashboard/platform"
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                >
+                  Platform
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="text-gray-900 dark:text-gray-100">General</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+
+
+
+
+
+
+
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
@@ -300,11 +356,10 @@ export default function StudentDashboard() {
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => toggleTaskCompletion(task.id)}
-                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                            completedTasks.includes(task.id) || task.progress === 100
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${completedTasks.includes(task.id) || task.progress === 100
                               ? "bg-green-500 border-green-500"
                               : "border-gray-400 hover:border-green-400"
-                          }`}
+                            }`}
                         >
                           {(completedTasks.includes(task.id) || task.progress === 100) && (
                             <CheckCircle className="w-3 h-3 text-white" />
@@ -469,11 +524,10 @@ export default function StudentDashboard() {
                 {achievements.map((achievement) => (
                   <div
                     key={achievement.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
-                      achievement.earned
+                    className={`flex items-center gap-3 p-3 rounded-lg transition-all ${achievement.earned
                         ? "bg-yellow-500/20 border border-yellow-500/30"
                         : "bg-gray-500/10 border border-gray-500/20 opacity-60"
-                    }`}
+                      }`}
                   >
                     <div className="text-2xl">{achievement.icon}</div>
                     <div className="flex-1">

@@ -1,5 +1,20 @@
 "use client"
 
+// nav bar
+
+import { Separator } from "@/components/ui/separator"
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+
+import { SidebarTrigger } from "@/components/ui/sidebar"
+
+
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -276,6 +291,52 @@ export default function StudentAttendanceHistory() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-white/10 dark:bg-gray-900/10 border-b border-white/20 dark:border-gray-700/50">
+
+
+
+
+
+        {/* Nav Bar and Icon */}
+        <div className="flex items-center gap-2 px-3 sm:px-4 m-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem className="hidden lg:block">
+                <BreadcrumbLink
+                  href="/dashboard"
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                >
+                  Dashboard
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden lg:block" />
+              <BreadcrumbItem className="hidden md:block">
+                <BreadcrumbLink
+                  href="/dashboard/platform"
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                >
+                  Platform
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="text-gray-900 dark:text-gray-100">General</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+
+
+
+
+
+
+
+
+
+
+
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/student-dashboard">
@@ -491,11 +552,10 @@ export default function StudentAttendanceHistory() {
               {achievements.map((achievement) => (
                 <div
                   key={achievement.id}
-                  className={`p-4 rounded-xl border transition-all hover:scale-105 ${
-                    achievement.earned
+                  className={`p-4 rounded-xl border transition-all hover:scale-105 ${achievement.earned
                       ? "bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/30"
                       : "bg-gray-500/10 border-gray-500/20"
-                  }`}
+                    }`}
                 >
                   <div className="text-center">
                     <div className="text-4xl mb-3">{achievement.icon}</div>
@@ -633,11 +693,10 @@ export default function StudentAttendanceHistory() {
                 return (
                   <div
                     key={i}
-                    className={`relative p-2 h-12 rounded-lg border transition-all hover:scale-105 cursor-pointer ${
-                      isCurrentMonth
+                    className={`relative p-2 h-12 rounded-lg border transition-all hover:scale-105 cursor-pointer ${isCurrentMonth
                         ? "border-white/20 bg-white/5 hover:bg-white/10"
                         : "border-gray-600/20 bg-gray-600/5 opacity-50"
-                    }`}
+                      }`}
                     onMouseEnter={() => dayData && setHoveredDate({ date: dateStr, data: dayData })}
                     onMouseLeave={() => setHoveredDate(null)}
                   >

@@ -1,3 +1,6 @@
+// This is nav-projects.jsx
+
+
 // 3. NavProjects.jsx
 // This shows project-based navigation:
 // Each project has actions like View, Share, Delete

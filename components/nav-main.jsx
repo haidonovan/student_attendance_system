@@ -1,3 +1,5 @@
+// This is nav-main.jsx
+
 // 2. NavMain.jsx
 // This renders the main navigation menu:
 // Loops through items from data.navMain

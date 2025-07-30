@@ -1,3 +1,8 @@
+
+
+// This is team-switcher.jsx
+
+
 "use client"
 
 import * as React from "react"
@@ -20,10 +25,10 @@ import {
 } from "@/components/ui/sidebar"
 
 export function TeamSwitcher({
-  teams
+  teams, activeTeam, setActiveTeam
 }) {
   const { isMobile } = useSidebar()
-  const [activeTeam, setActiveTeam] = React.useState(teams[0])
+  // const [activeTeam, setActiveTeam] = React.useState(teams[0])
 
   if (!activeTeam) {
     return null

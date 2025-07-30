@@ -38,6 +38,7 @@ model User {
   studentProfile    Student?
   notifications     Notification[]
   generatedReports  Report[]
+  password          String?
 
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt

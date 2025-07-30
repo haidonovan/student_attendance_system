@@ -1,3 +1,7 @@
+
+// This is nav-user.jsx
+
+
 // NavUser.jsx
 // This is the user account menu:
 // Shows avatar, name, email

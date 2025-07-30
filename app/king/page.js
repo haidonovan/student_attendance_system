@@ -6,16 +6,19 @@ import { Button } from "@/components/ui/button";
 export default function Hello (){
     const [msg, setMsg] = useState("");
     const clickFun = async () =>{
-        const read = await fetch("/test");
+        // you forget to write /api/test inside fetch param
+        const read = await fetch("/api/test");
         const json = await read.json();
         setMsg(json.data);
+        console.log(json.data);
     }
     
  return(
     
     <>
-    <p>{msg}</p>
-    <Button onClick>Click ME</Button>
+        <Button onClick={clickFun}>Don't thai to me</Button>
+        <p>{msg}</p>
+
     </>
 
  )

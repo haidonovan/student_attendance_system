@@ -1,3 +1,7 @@
+
+// This Is app-sidebar.jsx
+
+
 // TeamSwitcher.jsx
 // Dropdown for switching between teams (Acme Inc, Evil Corp, etc.)
 // Click opens a dropdown menu with team selection
@@ -11,6 +15,7 @@
 
 import * as React from "react"
 import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import {
   AudioWaveform,
   BookOpen,
@@ -45,17 +50,20 @@ const data = {
   },
   teams: [
     {
-      name: "Acme Inc",
+      name: "Admin",
+      role: "admin",
       logo: GalleryVerticalEnd,
       plan: "Enterprise",
     },
     {
-      name: "Acme Corp.",
+      name: "Teacher",
+      role: "teacher",
       logo: AudioWaveform,
       plan: "Startup",
     },
     {
-      name: "Evil Corp.",
+      name: "Student",
+      role: "student",
       logo: Command,
       plan: "Free",
     },
@@ -63,6 +71,7 @@ const data = {
   navMain: [
     {
       title: "Teacher",
+      role: "Teacher",
       url: "#",
       icon: SquareTerminal,
       isActive: true,
@@ -73,29 +82,34 @@ const data = {
         },
         {
           title: "Check Attendance",
-          url: "check-attendance",
+          url: "/dashboard/teacher/check-attendance",
         },
         {
           title: "Class",
-          url: "/dashboard/class",
+          url: "/dashboard/teacher/class",
         },
         {
           title: "Report",
-          url: "/dashboard/report"
+          url: "/dashboard/teacher/report"
         },
         {
           title: "History",
-          url: "/dashboard/history",
+          url: "/dashboard/teacher/history",
         }
       ],
     },
     {
       title: "Admin",
+      role: "Admin",
       url: "/dashboard/admin",
       icon: Bot,
       items: [
         {
-          title: "Admin Dashboard",
+          title: "General",
+          url: "/dashboard/admin",
+        },
+        {
+          title: "Admin Attendance",
           url: "/dashboard/admin/attendance",
         },
         {
@@ -126,6 +140,7 @@ const data = {
     },
     {
       title: "Student",
+      role: "Student",
       url: "/dashboard/student",
       icon: BookOpen,
       items: [
@@ -188,22 +203,39 @@ export function AppSidebar({
 }) {
 
   const { data: session, status } = useSession();
+  const router = useRouter();
 
   const user = {
     name: session?.user?.name || "Guest",
     email: session?.user?.email || "unknown@email.com",
     avatar: session?.user?.image || "/avatars/placeholder.jpg",
+
   }
+
+  const [activeTeam, setActiveTeam] = React.useState(data.teams[0]);
+
+  // when switches team, update state and navigate to that team's dashboard home
+  const handleSetActiveTeam = (team) => {
+    setActiveTeam(team);
+    router.push(`/dashboard/${team.role.toLowerCase()}`)
+  }
+
+  // Filter only relevant menu items
+  const filteredNavMain = data.navMain.filter(item => 
+    item.role?.toLowerCase() === activeTeam.role || item.role === "All"
+    
+  );
+
   return (
     // show all the left side bar
     <Sidebar collapsible="icon" {...props}>
       {/* header upper */}
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher teams={data.teams} activeTeam={activeTeam} setActiveTeam={handleSetActiveTeam}/>
       </SidebarHeader>
       {/* middle all the content student teacher admin */}
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={filteredNavMain} />
         <NavProjects projects={data.projects} />
       </SidebarContent>
       {/* show the profile billing so on */}
@@ -215,3 +247,4 @@ export function AppSidebar({
     </Sidebar>
   );
 }
+
