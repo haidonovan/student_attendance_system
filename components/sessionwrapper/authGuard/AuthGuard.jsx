@@ -11,7 +11,8 @@ export default function AuthGuard({ children }) {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/login");
+      // router.push("/login");
+      console.log("I was the one who push you back to login authguard")
     }
   }, [status, router]);
 
@@ -19,7 +20,10 @@ export default function AuthGuard({ children }) {
     return <Loading />;
   }
 
-  if (!session) return null;
+  if (!session) {
+    // return null;
+    console.log("sorry session was the one who do!");
+  } 
 
   return <>{children}</>;
 }

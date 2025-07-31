@@ -1,3 +1,5 @@
+// login folder in app -> page.js
+
 import { GalleryVerticalEnd } from "lucide-react"
 import { LoginForm } from "@/components/loginForm/login-form"
 import {
@@ -28,28 +30,28 @@ export default function LoginPage() {
       </div>
 
       {/* Right: Full Background Carousel */}
-<div className="hidden lg:block h-full w-full">
-  <Carousel className="h-full w-full">
-    <CarouselContent className="h-full">
-      {[
-        "https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d?fit=crop&w=1000&h=1000&q=80", // grayscale person
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?fit=crop&w=1000&h=1000&q=80", // grayscale woman portrait
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?fit=crop&w=1000&h=1000&q=80", // grayscale kid
-      ].map((src, index) => (
-        <CarouselItem
-          key={index}
-          className="h-full w-full flex items-center justify-center"
-        >
-          <img
-            src={src}
-            alt={`Slide ${index + 1}`}
-            className="h-full w-auto object-cover grayscale"
-          />
-        </CarouselItem>
-      ))}
-    </CarouselContent>
-  </Carousel>
-</div>
+      <div className="hidden lg:block h-full w-full">
+        <Carousel className="h-full w-full">
+          <CarouselContent className="h-full">
+            {[
+              "https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d?fit=crop&w=1000&h=1000&q=80", // grayscale person
+              "https://images.unsplash.com/photo-1494790108377-be9c29b29330?fit=crop&w=1000&h=1000&q=80", // grayscale woman portrait
+              "https://images.unsplash.com/photo-1517841905240-472988babdf9?fit=crop&w=1000&h=1000&q=80", // grayscale kid
+            ].map((src, index) => (
+              <CarouselItem
+                key={index}
+                className="h-full w-full flex items-center justify-center"
+              >
+                <img
+                  src={src}
+                  alt={`Slide ${index + 1}`}
+                  className="h-full w-auto object-cover grayscale"
+                />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+      </div>
 
     </div>
   )

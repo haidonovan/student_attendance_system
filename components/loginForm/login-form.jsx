@@ -83,7 +83,7 @@
 
 
 
-
+// login-form.jsx
 
 
 
@@ -112,21 +112,49 @@ export function LoginForm({ className, ...props }) {
     }
   }, [status, router])
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    const res = await fetch("/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    })
 
-    const result = await res.json()
-    if (!res.ok) {
-      setError(result.message || "Login failed")
-    } else {
-      router.push("/dashboard") // or reload for session to kick in
-    }
+  // old one
+  // async function handleSubmit(e) {
+  //   e.preventDefault()
+  //   const res = await fetch("/api/login", {
+  //     method: "POST",
+  //     headers: { "Content-Type": "application/json" },
+  //     body: JSON.stringify({ email, password }),
+  //   })
+
+  //   const result = await res.json()
+  //   if (!res.ok) {
+  //     setError(result.message || "Login failed")
+  //   } else {
+  //     router.push("/dashboard") // or reload for session to kick in
+  //   }
+  // }
+
+  async function handleSubmit(e) {
+  e.preventDefault()
+
+  // 1. Show what the user typed
+  alert(`You entered:\nEmail: ${email}\nPassword: ${password}`)
+  console.log("Typed Email:", email)
+  console.log("Typed Password:", password)
+
+  const res = await fetch("/api/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  })
+
+  const result = await res.json()
+
+  // 2. Show what the backend responded (user data from DB)
+  if (res.ok) {
+    alert(`Login successful!\n\nUser data from DB:\n${JSON.stringify(result.user, null, 2)}`)
+    router.push("/dashboard")
+  } else {
+    setError(result.message || "Login failed")
   }
+}
+
 
   return (
     <form
@@ -169,6 +197,7 @@ export function LoginForm({ className, ...props }) {
         <Button type="submit" className="w-full">
           Login
         </Button>
+        <SignInButton>Login with Google</SignInButton>
         <div className="text-center text-sm">
           Don&apos;t have an account?{" "}
           <a href="#" className="underline underline-offset-4">
