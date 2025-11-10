@@ -1,33 +1,30 @@
 // middleware.js
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { prisma } from "@/lib/prisma"; // adjust path if needed
+import { prisma } from "@/lib/prisma";
 
 export async function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  // PUBLIC_PATHS: pages or APIs that anyone can access
+  // Public paths
   const PUBLIC_PATHS = ["/", "/login", "/api/login", "/favicon.ico", "/_next/"];
   if (PUBLIC_PATHS.some(path => pathname.startsWith(path))) {
-    return NextResponse.next(); // allow access without checking cookies
+    return NextResponse.next();
   }
 
-  // Block all /api routes if no valid session
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get("sessionToken")?.value;
+  // Get cookie from request
+  const sessionToken = req.cookies.get("sessionToken")?.value;
 
   if (!sessionToken) {
-    // API request → return 401 JSON
     if (pathname.startsWith("/api")) {
       return new NextResponse(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
     }
-    // Page request → redirect to login
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  // Check session in DB
+  // Find session in DB
   const session = await prisma.session.findUnique({
     where: { sessionToken },
+    include: { user: true },
   });
 
   if (!session || new Date(session.expires) < new Date()) {
@@ -37,11 +34,31 @@ export async function middleware(req) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  // Valid session → allow request
+  const role = session.user.role.toUpperCase(); // STUDENT, TEACHER, ADMIN
+
+if (pathname === "/dashboard") {
+  // Redirect to the correct role page
+  return NextResponse.redirect(new URL(`/dashboard/${role.toLowerCase()}`, req.url));
+}
+
+// Restrict access to role-specific pages
+if (role === "STUDENT" && pathname.startsWith("/dashboard") && !pathname.startsWith("/dashboard/student")) {
+  return NextResponse.redirect(new URL("/dashboard/student", req.url));
+}
+
+if (role === "TEACHER" && pathname.startsWith("/dashboard") && !pathname.startsWith("/dashboard/teacher")) {
+  return NextResponse.redirect(new URL("/dashboard/teacher", req.url));
+}
+
+if (role === "ADMIN" && pathname.startsWith("/dashboard") && !pathname.startsWith("/dashboard/admin")) {
+  return NextResponse.redirect(new URL("/dashboard/admin", req.url));
+}
+
+
   return NextResponse.next();
 }
 
-// ✅ Matcher to run middleware on all paths except static assets
+// Run middleware on all paths except static files
 export const config = {
   matcher: ["/((?!favicon.ico|_next/static|_next/image|_next/font).*)"],
 };

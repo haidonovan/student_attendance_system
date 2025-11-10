@@ -1,16 +1,25 @@
-import TeacherDashboardPage from "./teacher/page";
 
-// app/dashboard/page.jsx
-export default function DashboardHomePage() {
-  return (
-    <>
-      {/* <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-        <div className="bg-muted/50 aspect-video rounded-xl" />
-        <div className="bg-muted/50 aspect-video rounded-xl" />
-        <div className="bg-muted/50 aspect-video rounded-xl" />
-      </div>
-      <div className="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:min-h-min" /> */}
-      <TeacherDashboardPage/>
-    </>
-  );
+// app/dashboard/page.js
+import { prisma } from "@/lib/prisma";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+export default async function DashboardHome() {
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get("sessionToken")?.value;
+
+  if (!sessionToken) return redirect("/login");
+
+  const session = await prisma.session.findUnique({
+    where: { sessionToken },
+    include: { user: true },
+  });
+
+  if (!session || new Date(session.expires) < new Date()) {
+    return redirect("/login");
+  }
+
+  const role = session.user.role.toLowerCase();
+
+  return redirect(`/dashboard/${role}`);
 }
