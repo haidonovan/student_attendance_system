@@ -17,10 +17,12 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 export default function DashboardLayout({ children }) {
   return (
     <AuthGuard>
+      <ProtectedRoute>
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
@@ -32,6 +34,7 @@ export default function DashboardLayout({ children }) {
           </div>
         </SidebarInset>
       </SidebarProvider>
+      </ProtectedRoute>
     </AuthGuard>
   );
 }

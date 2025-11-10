@@ -1,25 +1,53 @@
-import { prisma } from '../../../lib/prisma' // adjust path if needed
+// app/api/users/route.js
+import { prisma } from "@/lib/prisma";
+import { requireAuth } from "../auth-check"; // adjust path if needed
 
-// GET all users (optional)
+// Helper: only allow TEACHER or ADMIN
+function checkUserPermission(user) {
+  return user && (user.role === "ADMIN" || user.role === "TEACHER");
+}
+
+// GET all users
 export async function GET() {
+  const auth = await requireAuth();
+  if (auth.error) return new Response(JSON.stringify({ error: auth.error }), { status: auth.status });
+
+  const user = await prisma.user.findUnique({ 
+    where: { id: auth.session.userId } 
+  });
+
+  if (!checkUserPermission(user)) {
+    return new Response(JSON.stringify({ error: "Forbidden: Only teachers or admins can view users" }), { status: 403 });
+  }
+
   try {
-    const users = await prisma.user.findMany()
-    return new Response(JSON.stringify(users), { status: 200 })
+    const users = await prisma.user.findMany();
+    return new Response(JSON.stringify(users), { status: 200 });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 }
 
-// POST create single or multiple users
+// POST create users
 export async function POST(req) {
+  const auth = await requireAuth();
+  if (auth.error) return new Response(JSON.stringify({ error: auth.error }), { status: auth.status });
+
+  const user = await prisma.user.findUnique({ 
+    where: { id: auth.session.userId } 
+  });
+
+  if (!checkUserPermission(user)) {
+    return new Response(JSON.stringify({ error: "Forbidden: Only teachers or admins can create users" }), { status: 403 });
+  }
+
   try {
-    const body = await req.json()
+    const body = await req.json();
 
     if (Array.isArray(body)) {
-      // multiple users
-      for (const user of body) {
-        if (!user.name || !user.email || !user.password) {
-          return new Response(JSON.stringify({ error: 'Each user must have name, email, and password' }), { status: 400 })
+      for (const u of body) {
+        if (!u.name || !u.email || !u.password) {
+          return new Response(JSON.stringify({ error: 'Each user must have name, email, and password' }), { status: 400 });
         }
       }
 
@@ -30,32 +58,23 @@ export async function POST(req) {
           password: u.password,
           role: u.role || 'STUDENT',
         })),
-        skipDuplicates: true, // skip existing emails
-      })
+        skipDuplicates: true,
+      });
 
-      return new Response(JSON.stringify(newUsers), { status: 201 })
-
+      return new Response(JSON.stringify(newUsers), { status: 201 });
     } else {
-      // single user
-      const { name, email, password, role } = body
-
+      const { name, email, password, role } = body;
       if (!name || !email || !password) {
-        return new Response(JSON.stringify({ error: 'Name, email, and password are required' }), { status: 400 })
+        return new Response(JSON.stringify({ error: 'Name, email, and password are required' }), { status: 400 });
       }
 
       const newUser = await prisma.user.create({
-        data: {
-          name,
-          email,
-          password,
-          role: role || 'STUDENT',
-        },
-      })
+        data: { name, email, password, role: role || 'STUDENT' },
+      });
 
-      return new Response(JSON.stringify(newUser), { status: 201 })
+      return new Response(JSON.stringify(newUser), { status: 201 });
     }
-
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 }

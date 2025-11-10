@@ -131,29 +131,26 @@ export function LoginForm({ className, ...props }) {
   // }
 
   async function handleSubmit(e) {
-  e.preventDefault()
-
-  // 1. Show what the user typed
-  alert(`You entered:\nEmail: ${email}\nPassword: ${password}`)
-  console.log("Typed Email:", email)
-  console.log("Typed Password:", password)
+  e.preventDefault();
+  setError("");
 
   const res = await fetch("/api/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
-  })
+  });
 
-  const result = await res.json()
+  const data = await res.json();
 
-  // 2. Show what the backend responded (user data from DB)
-  if (res.ok) {
-    alert(`Login successful!\n\nUser data from DB:\n${JSON.stringify(result.user, null, 2)}`)
-    router.push("/dashboard")
+  if (!res.ok) {
+    // Show error from backend
+    setError(data.error || "Login failed");
   } else {
-    setError(result.message || "Login failed")
+    // Login successful → redirect to dashboard
+    router.push("/dashboard");
   }
 }
+
 
 
   return (
