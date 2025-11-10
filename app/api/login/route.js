@@ -24,9 +24,9 @@ export async function POST(req) {
 
     // Create session
     const sessionToken = uuidv4();
-    // const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 1 week
+    const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 1 week
     // // Set session expiry to 30 seconds from now
-    const expires = new Date(Date.now() + 30 * 1000); // 30 seconds
+    // const expires = new Date(Date.now() + 30 * 1000); // 30 seconds
 
     await prisma.session.create({
       data: {
