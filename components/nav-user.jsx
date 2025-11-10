@@ -115,16 +115,16 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <Sparkles />
-                Upgrade to Pro
+                <BadgeCheck />
+                Account
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
+            {/* <DropdownMenuSeparator /> */}
             <DropdownMenuGroup>
 
               
-                <DropdownMenuItem>
-                  <BadgeCheck />
+                {/* <DropdownMenuItem>
+                  
                   Account
                 </DropdownMenuItem>
               
@@ -134,7 +134,7 @@ export function NavUser({
               <DropdownMenuItem>
                 <CreditCard />
                 Billing
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
               <DropdownMenuItem>
                 <Bell />
                 Notifications

@@ -129,12 +129,16 @@ export function AppSidebar(props) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} activeTeam={activeTeam} setActiveTeam={handleSetActiveTeam} />
+        <TeamSwitcher
+          teams={[activeTeam]}          // only the team matching user role
+          activeTeam={activeTeam}      // already set by role
+          setActiveTeam={() => { }}     // do nothing, disable switching
+        />
       </SidebarHeader>
 
       <SidebarContent>
         <NavMain items={filteredNavMain} />
-        <NavProjects projects={data.projects} />
+        {/* <NavProjects projects={data.projects} /> */}
       </SidebarContent>
 
       <SidebarFooter>
