@@ -62,20 +62,20 @@ export default function HomePage() {
             >
               Features
             </a>
-            <a
+            {/* <a
               href="#pricing"
               className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               Pricing
-            </a>
+            </a> */}
             <a
-              href="#about"
+              href="#features"
               className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               About
             </a>
             <ThemeToggle />
-            <Button variant="outline" className="mr-2 bg-transparent dark:border-gray-600 dark:text-gray-300">
+            <Button onClick={() => router.push(login_route)} variant="outline" className="mr-2 bg-transparent dark:border-gray-600 dark:text-gray-300">
               Sign In
             </Button>
             <Button onClick={() => router.push(login_route)}>Get Started</Button>
@@ -99,7 +99,7 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" className="text-lg px-8 py-6" onClick={()=> router.push(login_route)}>
-              Start Free Trial
+              Get Started
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
             <Button
@@ -108,7 +108,7 @@ export default function HomePage() {
               className="text-lg px-8 py-6 bg-transparent dark:border-gray-600 dark:text-gray-300"
               onClick={() => router.push(login_route)}
             >
-              Watch Demo
+              Log in
             </Button>
           </div>
           <div className="mt-12 flex items-center justify-center space-x-8 text-sm text-gray-500 dark:text-gray-400">
@@ -335,16 +335,17 @@ export default function HomePage() {
             Join thousands of educators who have already improved their attendance management with AttendanceHub.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" variant="secondary" className="text-lg px-8 py-6">
-              Start Free Trial
+            <Button onClick={() => router.push(login_route)} size="lg" variant="secondary" className="text-lg px-8 py-6">
+              Start Here
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
             <Button
+              onClick={() => router.push(login_route)}
               size="lg"
               variant="outline"
               className="text-lg px-8 py-6 border-white text-white hover:bg-white hover:text-blue-600 bg-transparent"
             >
-              Schedule Demo
+              Try
             </Button>
           </div>
         </div>

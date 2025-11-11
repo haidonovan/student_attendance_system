@@ -26,6 +26,7 @@ export async function GET(req) {
       name: session.user.name,
       email: session.user.email,
       role: session.user.role,
+      image: session.user.image || null,
     };
 
     return new Response(JSON.stringify({ user }), { status: 200 });

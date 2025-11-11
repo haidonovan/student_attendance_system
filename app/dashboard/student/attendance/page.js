@@ -1,21 +1,6 @@
 "use client"
 
-// nav bar
-
-import { Separator } from "@/components/ui/separator"
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-
-import { SidebarTrigger } from "@/components/ui/sidebar"
-
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -49,142 +34,116 @@ export default function StudentAttendanceHistory() {
   const [selectedMonth, setSelectedMonth] = useState(new Date())
   const [selectedClass, setSelectedClass] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
-  const [dateRange, setDateRange] = useState({ from: null, to: null })
   const [hoveredDate, setHoveredDate] = useState(null)
 
-  // Sample data
-  const attendanceStats = {
-    totalClasses: 132,
-    presentCount: 118,
-    absentCount: 8,
-    lateCount: 6,
-    presentPercentage: 89.4,
-    absentPercentage: 6.1,
-    latePercentage: 4.5,
-    bestMonth: "June 2025 (98%)",
-    longestStreak: 23,
-    currentStreak: 5,
-    mostMissedSubject: "Math on Mondays",
+  const [attendanceStats, setAttendanceStats] = useState(null)
+  const [attendanceRecords, setAttendanceRecords] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const fetchAttendanceData = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch("/api/dashboard/student/attendance")
+        const data = await response.json()
+
+        if (!response.ok) {
+          setError(data.error || "Failed to fetch attendance data")
+          return
+        }
+
+        setAttendanceStats(data.statistics)
+        setAttendanceRecords(data.attendanceRecords || [])
+      } catch (err) {
+        setError("Error fetching attendance data")
+        console.error("[v0] Attendance fetch error:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchAttendanceData()
+  }, [])
+
+  const getWeeklyTrendData = () => {
+    const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    const weekData = {}
+
+    weekDays.forEach((day, index) => {
+      weekData[index] = { day, attended: 0, total: 0, percentage: 0 }
+    })
+
+    attendanceRecords.forEach((record) => {
+      const date = new Date(record.date)
+      const dayIndex = date.getDay()
+
+      if (weekData[dayIndex]) {
+        weekData[dayIndex].total += 1
+        if (record.status === "PRESENT") {
+          weekData[dayIndex].attended += 1
+        }
+      }
+    })
+
+    Object.keys(weekData).forEach((key) => {
+      const data = weekData[key]
+      data.percentage = data.total > 0 ? Math.round((data.attended / data.total) * 100) : 0
+    })
+
+    return Object.values(weekData)
   }
 
-  const weeklyTrendData = [
-    { day: "Mon", attended: 18, total: 20, percentage: 90 },
-    { day: "Tue", attended: 19, total: 20, percentage: 95 },
-    { day: "Wed", attended: 17, total: 20, percentage: 85 },
-    { day: "Thu", attended: 20, total: 20, percentage: 100 },
-    { day: "Fri", attended: 16, total: 20, percentage: 80 },
-  ]
+  const getMonthlyTrendData = () => {
+    const monthData = {}
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
-  const monthlyTrendData = [
-    { month: "Sep", percentage: 85 },
-    { month: "Oct", percentage: 88 },
-    { month: "Nov", percentage: 92 },
-    { month: "Dec", percentage: 87 },
-    { month: "Jan", percentage: 94 },
-  ]
+    attendanceRecords.forEach((record) => {
+      const date = new Date(record.date)
+      const monthKey = monthNames[date.getMonth()]
 
-  const attendanceData = [
-    {
-      date: "2025-01-20",
-      class: "Biology A",
-      time: "09:00-10:00",
-      status: "present",
-      teacher: "Ms. Hana",
-      subject: "Biology",
-    },
-    {
-      date: "2025-01-20",
-      class: "Mathematics",
-      time: "10:00-11:00",
-      status: "late",
-      teacher: "Mr. Smith",
-      subject: "Math",
-    },
-    {
-      date: "2025-01-19",
-      class: "English Literature",
-      time: "11:00-12:00",
-      status: "present",
-      teacher: "Ms. Johnson",
-      subject: "English",
-    },
-    {
-      date: "2025-01-19",
-      class: "Physics",
-      time: "14:00-15:00",
-      status: "absent",
-      teacher: "Dr. Wilson",
-      subject: "Physics",
-    },
-    {
-      date: "2025-01-18",
-      class: "Chemistry",
-      time: "09:00-10:00",
-      status: "present",
-      teacher: "Prof. Davis",
-      subject: "Chemistry",
-    },
-  ]
+      if (!monthData[monthKey]) {
+        monthData[monthKey] = { month: monthKey, present: 0, total: 0 }
+      }
 
-  const achievements = [
-    {
-      id: 1,
-      title: "Perfect Week",
-      description: "100% attendance this week",
-      icon: "🎯",
-      earned: true,
-      date: "Jan 15, 2025",
-    },
-    {
-      id: 2,
-      title: "Early Bird",
-      description: "No late arrivals for 10 days",
-      icon: "🌅",
-      earned: true,
-      date: "Jan 10, 2025",
-    },
-    {
-      id: 3,
-      title: "Streak Master",
-      description: "20+ day attendance streak",
-      icon: "🔥",
-      earned: false,
-      progress: 75,
-    },
-    {
-      id: 4,
-      title: "Monthly Champion",
-      description: "95%+ attendance this month",
-      icon: "👑",
-      earned: false,
-      progress: 89,
-    },
-  ]
+      monthData[monthKey].total += 1
+      if (record.status === "PRESENT") {
+        monthData[monthKey].present += 1
+      }
+    })
 
-  const classes = [
-    { id: "all", name: "All Classes" },
-    { id: "biology", name: "Biology A" },
-    { id: "math", name: "Mathematics" },
-    { id: "english", name: "English Literature" },
-    { id: "physics", name: "Physics" },
-    { id: "chemistry", name: "Chemistry" },
-  ]
+    return Object.values(monthData).map((data) => ({
+      month: data.month,
+      percentage: data.total > 0 ? Math.round((data.present / data.total) * 100) : 0,
+    }))
+  }
 
-  // Generate calendar data
+  const weeklyTrendData = getWeeklyTrendData()
+  const monthlyTrendData = getMonthlyTrendData()
+
+  const classes = [{ id: "all", name: "All Classes" }]
+
+  const classesSet = new Set()
+  attendanceRecords.forEach((record) => {
+    classesSet.add(record.class)
+  })
+  classesSet.forEach((className) => {
+    classes.push({ id: className.toLowerCase(), name: className })
+  })
+
   const generateCalendarData = () => {
     const calendarData = {}
-    const currentDate = new Date()
     const startOfMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1)
     const endOfMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0)
 
     for (let date = new Date(startOfMonth); date <= endOfMonth; date.setDate(date.getDate() + 1)) {
       const dateStr = date.toISOString().split("T")[0]
-      const dayAttendance = attendanceData.filter((record) => record.date === dateStr)
+      const dayAttendance = attendanceRecords.filter((record) => record.date === dateStr)
 
       if (dayAttendance.length > 0) {
-        const presentCount = dayAttendance.filter((record) => record.status === "present").length
-        const absentCount = dayAttendance.filter((record) => record.status === "absent").length
-        const lateCount = dayAttendance.filter((record) => record.status === "late").length
+        const presentCount = dayAttendance.filter((record) => record.status === "PRESENT").length
+        const absentCount = dayAttendance.filter((record) => record.status === "ABSENT").length
+        const lateCount = dayAttendance.filter((record) => record.status === "LATE").length
 
         let status = "present"
         if (absentCount > 0) status = "absent"
@@ -192,7 +151,12 @@ export default function StudentAttendanceHistory() {
 
         calendarData[dateStr] = {
           status,
-          classes: dayAttendance,
+          classes: dayAttendance.map((r) => ({
+            class: r.class,
+            teacher: r.teacher,
+            status: r.status.toLowerCase(),
+            time: "N/A", // Time is not provided in the new data structure
+          })),
           summary: `${presentCount} present, ${absentCount} absent, ${lateCount} late`,
         }
       }
@@ -204,7 +168,8 @@ export default function StudentAttendanceHistory() {
   const calendarData = generateCalendarData()
 
   const getStatusIcon = (status) => {
-    switch (status) {
+    const lowerStatus = status.toLowerCase()
+    switch (lowerStatus) {
       case "present":
         return <CheckCircle className="w-4 h-4 text-green-500" />
       case "absent":
@@ -217,7 +182,8 @@ export default function StudentAttendanceHistory() {
   }
 
   const getStatusBadge = (status) => {
-    switch (status) {
+    const lowerStatus = status.toLowerCase()
+    switch (lowerStatus) {
       case "present":
         return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">Present</Badge>
       case "absent":
@@ -230,7 +196,8 @@ export default function StudentAttendanceHistory() {
   }
 
   const getStatusColor = (status) => {
-    switch (status) {
+    const lowerStatus = status.toLowerCase()
+    switch (lowerStatus) {
       case "present":
         return "bg-green-500"
       case "absent":
@@ -281,62 +248,32 @@ export default function StudentAttendanceHistory() {
     )
   }
 
-  const filteredAttendanceData = attendanceData.filter((record) => {
-    if (selectedClass !== "all" && !record.class.toLowerCase().includes(selectedClass)) return false
-    if (selectedStatus !== "all" && record.status !== selectedStatus) return false
+  const filteredAttendanceData = attendanceRecords.filter((record) => {
+    if (selectedClass !== "all" && record.class.toLowerCase() !== selectedClass) return false
+    if (selectedStatus !== "all" && record.status.toLowerCase() !== selectedStatus) return false
     return true
   })
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
+        <div className="text-white text-xl">Loading attendance data...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
+        <div className="text-red-400 text-xl">Error: {error}</div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-white/10 dark:bg-gray-900/10 border-b border-white/20 dark:border-gray-700/50">
-
-
-
-
-
-        {/* Nav Bar and Icon */}
-        <div className="flex items-center gap-2 px-3 sm:px-4 m-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem className="hidden lg:block">
-                <BreadcrumbLink
-                  href="/dashboard"
-                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                >
-                  Dashboard
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden lg:block" />
-              <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink
-                  href="/dashboard/platform"
-                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                >
-                  Platform
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="text-gray-900 dark:text-gray-100">General</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-
-
-
-
-
-
-
-
-
-
-
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/student-dashboard">
@@ -354,10 +291,10 @@ export default function StudentAttendanceHistory() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
+            {/* <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
               <Download className="w-4 h-4 mr-2" />
               Export PDF
-            </Button>
+            </Button> */}
             <ThemeToggle />
           </div>
         </div>
@@ -365,68 +302,68 @@ export default function StudentAttendanceHistory() {
 
       <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Statistics Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md border-white/20 dark:border-gray-700/50">
-            <CardContent className="p-6 text-center">
-              <CircularProgress percentage={attendanceStats.presentPercentage} color="#10B981" />
-              <div className="mt-4">
-                <h3 className="text-lg font-semibold text-white dark:text-white">Present</h3>
-                <p className="text-sm text-gray-300 dark:text-gray-400">
-                  {attendanceStats.presentCount} / {attendanceStats.totalClasses} classes
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+        {attendanceStats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md border-white/20 dark:border-gray-700/50">
+              <CardContent className="p-6 text-center">
+                <CircularProgress percentage={attendanceStats.presentPercentage} color="#10B981" />
+                <div className="mt-4">
+                  <h3 className="text-lg font-semibold text-white dark:text-white">Present</h3>
+                  <p className="text-sm text-gray-300 dark:text-gray-400">
+                    {attendanceStats.presentCount} / {attendanceStats.totalRecords} classes
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md border-white/20 dark:border-gray-700/50">
-            <CardContent className="p-6 text-center">
-              <CircularProgress percentage={attendanceStats.absentPercentage} color="#EF4444" />
-              <div className="mt-4">
-                <h3 className="text-lg font-semibold text-white dark:text-white">Absent</h3>
-                <p className="text-sm text-gray-300 dark:text-gray-400">{attendanceStats.absentCount} classes missed</p>
-              </div>
-            </CardContent>
-          </Card>
+            <Card className="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md border-white/20 dark:border-gray-700/50">
+              <CardContent className="p-6 text-center">
+                <CircularProgress percentage={attendanceStats.absentPercentage} color="#EF4444" />
+                <div className="mt-4">
+                  <h3 className="text-lg font-semibold text-white dark:text-white">Absent</h3>
+                  <p className="text-sm text-gray-300 dark:text-gray-400">
+                    {attendanceStats.absentCount} classes missed
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md border-white/20 dark:border-gray-700/50">
-            <CardContent className="p-6 text-center">
-              <CircularProgress percentage={attendanceStats.latePercentage} color="#F59E0B" />
-              <div className="mt-4">
-                <h3 className="text-lg font-semibold text-white dark:text-white">Late</h3>
-                <p className="text-sm text-gray-300 dark:text-gray-400">{attendanceStats.lateCount} late arrivals</p>
-              </div>
-            </CardContent>
-          </Card>
+            <Card className="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md border-white/20 dark:border-gray-700/50">
+              <CardContent className="p-6 text-center">
+                <CircularProgress percentage={attendanceStats.latePercentage} color="#F59E0B" />
+                <div className="mt-4">
+                  <h3 className="text-lg font-semibold text-white dark:text-white">Late</h3>
+                  <p className="text-sm text-gray-300 dark:text-gray-400">{attendanceStats.lateCount} late arrivals</p>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md border-white/20 dark:border-gray-700/50">
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                    <Flame className="w-5 h-5 text-white" />
+            <Card className="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md border-white/20 dark:border-gray-700/50">
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                      <Flame className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white dark:text-white">5</h3>
+                      <p className="text-sm text-gray-300 dark:text-gray-400">Current Streak</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white dark:text-white">
-                      {attendanceStats.currentStreak}
-                    </h3>
-                    <p className="text-sm text-gray-300 dark:text-gray-400">Current Streak</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                      <Target className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white dark:text-white">23</h3>
+                      <p className="text-sm text-gray-300 dark:text-gray-400">Best Streak</p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                    <Target className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-white dark:text-white">
-                      {attendanceStats.longestStreak}
-                    </h3>
-                    <p className="text-sm text-gray-300 dark:text-gray-400">Best Streak</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Key Insights */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -434,7 +371,7 @@ export default function StudentAttendanceHistory() {
             <CardContent className="p-6 text-center">
               <Trophy className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-white dark:text-white mb-2">Best Month</h3>
-              <p className="text-sm text-gray-300 dark:text-gray-400">{attendanceStats.bestMonth}</p>
+              <p className="text-sm text-gray-300 dark:text-gray-400">{attendanceStats?.bestMonth || "N/A"}</p>
             </CardContent>
           </Card>
 
@@ -442,7 +379,7 @@ export default function StudentAttendanceHistory() {
             <CardContent className="p-6 text-center">
               <BookOpen className="w-12 h-12 text-blue-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-white dark:text-white mb-2">Total Classes</h3>
-              <p className="text-sm text-gray-300 dark:text-gray-400">{attendanceStats.totalClasses} attended</p>
+              <p className="text-sm text-gray-300 dark:text-gray-400">{attendanceStats?.totalRecords || 0} records</p>
             </CardContent>
           </Card>
 
@@ -450,7 +387,7 @@ export default function StudentAttendanceHistory() {
             <CardContent className="p-6 text-center">
               <Clock className="w-12 h-12 text-red-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-white dark:text-white mb-2">Most Missed</h3>
-              <p className="text-sm text-gray-300 dark:text-gray-400">{attendanceStats.mostMissedSubject}</p>
+              <p className="text-sm text-gray-300 dark:text-gray-400">{attendanceStats?.mostMissedSubject || "N/A"}</p>
             </CardContent>
           </Card>
         </div>
@@ -536,7 +473,7 @@ export default function StudentAttendanceHistory() {
           </Card>
         </div>
 
-        {/* Achievements */}
+        {/* Achievements - This section is not being updated from the API data, so it remains as is. */}
         <Card className="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md border-white/20 dark:border-gray-700/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-white dark:text-white">
@@ -549,13 +486,48 @@ export default function StudentAttendanceHistory() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {achievements.map((achievement) => (
+              {/* Assuming achievements data remains static for now */}
+              {[
+                {
+                  id: 1,
+                  title: "Perfect Week",
+                  description: "100% attendance this week",
+                  icon: "🎯",
+                  earned: true,
+                  date: "Jan 15, 2025",
+                },
+                {
+                  id: 2,
+                  title: "Early Bird",
+                  description: "No late arrivals for 10 days",
+                  icon: "🌅",
+                  earned: true,
+                  date: "Jan 10, 2025",
+                },
+                {
+                  id: 3,
+                  title: "Streak Master",
+                  description: "20+ day attendance streak",
+                  icon: "🔥",
+                  earned: false,
+                  progress: 75,
+                },
+                {
+                  id: 4,
+                  title: "Monthly Champion",
+                  description: "95%+ attendance this month",
+                  icon: "👑",
+                  earned: false,
+                  progress: 89,
+                },
+              ].map((achievement) => (
                 <div
                   key={achievement.id}
-                  className={`p-4 rounded-xl border transition-all hover:scale-105 ${achievement.earned
+                  className={`p-4 rounded-xl border transition-all hover:scale-105 ${
+                    achievement.earned
                       ? "bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/30"
                       : "bg-gray-500/10 border-gray-500/20"
-                    }`}
+                  }`}
                 >
                   <div className="text-center">
                     <div className="text-4xl mb-3">{achievement.icon}</div>
@@ -693,10 +665,11 @@ export default function StudentAttendanceHistory() {
                 return (
                   <div
                     key={i}
-                    className={`relative p-2 h-12 rounded-lg border transition-all hover:scale-105 cursor-pointer ${isCurrentMonth
+                    className={`relative p-2 h-12 rounded-lg border transition-all hover:scale-105 cursor-pointer ${
+                      isCurrentMonth
                         ? "border-white/20 bg-white/5 hover:bg-white/10"
                         : "border-gray-600/20 bg-gray-600/5 opacity-50"
-                      }`}
+                    }`}
                     onMouseEnter={() => dayData && setHoveredDate({ date: dateStr, data: dayData })}
                     onMouseLeave={() => setHoveredDate(null)}
                   >
@@ -726,7 +699,7 @@ export default function StudentAttendanceHistory() {
                     <div key={index} className="flex items-center gap-2 text-xs">
                       {getStatusIcon(cls.status)}
                       <span className="text-gray-300 dark:text-gray-400">
-                        {cls.class} ({cls.time}) - {cls.teacher}
+                        {cls.class} - {cls.teacher}
                       </span>
                     </div>
                   ))}
@@ -754,7 +727,6 @@ export default function StudentAttendanceHistory() {
                   <tr className="border-b border-white/20">
                     <th className="text-left py-3 px-4 font-medium text-gray-300 dark:text-gray-400">Date</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-300 dark:text-gray-400">Class</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-300 dark:text-gray-400">Time</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-300 dark:text-gray-400">Status</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-300 dark:text-gray-400">Teacher</th>
                   </tr>
@@ -762,11 +734,8 @@ export default function StudentAttendanceHistory() {
                 <tbody>
                   {filteredAttendanceData.map((record, index) => (
                     <tr key={index} className="border-b border-white/10 hover:bg-white/5 transition-colors">
-                      <td className="py-3 px-4 text-white dark:text-white">
-                        {new Date(record.date).toLocaleDateString()}
-                      </td>
+                      <td className="py-3 px-4 text-white dark:text-white">{record.date}</td>
                       <td className="py-3 px-4 text-white dark:text-white">{record.class}</td>
-                      <td className="py-3 px-4 text-gray-300 dark:text-gray-400">{record.time}</td>
                       <td className="py-3 px-4">{getStatusBadge(record.status)}</td>
                       <td className="py-3 px-4 text-gray-300 dark:text-gray-400">{record.teacher}</td>
                     </tr>

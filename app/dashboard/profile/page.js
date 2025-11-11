@@ -6,6 +6,18 @@ import { ProfilePopup } from "@/components/userDefine/profile/profle"
 
 export default function ProfileDemo() {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [profileData, setProfileData] = useState(null)
+
+const handleOpenProfile = async () => {
+  try {
+    const res = await fetch("/api/profile")
+    const data = await res.json()
+    setProfileData(data.user)
+    setIsProfileOpen(true)
+  } catch (err) {
+    console.error(err)
+  }
+}
 
   const sampleUser = {
     id: "user_123",
@@ -52,55 +64,27 @@ export default function ProfileDemo() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center space-y-4">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Profile Popup Demo</h1>
-          <p className="text-slate-600 dark:text-slate-400">Click the button below to open the profile popup modal</p>
-          <Button onClick={() => setIsProfileOpen(true)} className="bg-slate-600 hover:bg-slate-700 text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center p-4 sm:p-8">
+      <div className="w-full max-w-4xl bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 sm:p-10 flex flex-col items-center">
+        <div className="text-center space-y-3 sm:space-y-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Profile Popup Demo</h1>
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+            Click the button below to open the profile popup modal
+          </p>
+          <Button
+            onClick={handleOpenProfile}
+            className="bg-slate-600 hover:bg-slate-700 text-white px-6 py-2 sm:px-8 sm:py-3 rounded-md"
+          >
             Open Profile
           </Button>
         </div>
 
-        <ProfilePopup isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} userProfile={sampleUser} />
+        <ProfilePopup
+          isOpen={isProfileOpen}
+          onClose={() => setIsProfileOpen(false)}
+          userProfile={profileData}
+        />
       </div>
     </div>
   )
 }
-
-
-// import {
-//   AlertDialog,
-//   AlertDialogAction,
-//   AlertDialogCancel,
-//   AlertDialogContent,
-//   AlertDialogDescription,
-//   AlertDialogFooter,
-//   AlertDialogHeader,
-//   AlertDialogTitle,
-//   AlertDialogTrigger,
-// } from "@/components/ui/alert-dialog"
-// import { Button } from "@/components/ui/button"
-
-// export default function AlertDialogDemo() {
-//   return (
-//     <AlertDialog>
-//       <AlertDialogTrigger asChild>
-//         <Button variant="outline">Show Dialog</Button>
-//       </AlertDialogTrigger>
-//       <AlertDialogContent>
-//         <AlertDialogHeader>
-//           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-//           <AlertDialogDescription>
-//             This action cannot be undone. This will permanently delete your
-//             account and remove your data from our servers.
-//           </AlertDialogDescription>
-//         </AlertDialogHeader>
-//         <AlertDialogFooter>
-//           <AlertDialogCancel>Cancel</AlertDialogCancel>
-//           <AlertDialogAction>Continue</AlertDialogAction>
-//         </AlertDialogFooter>
-//       </AlertDialogContent>
-//     </AlertDialog>
-//   )
-// }

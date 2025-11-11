@@ -194,11 +194,11 @@ export function LoginForm({ className, ...props }) {
         <Button type="submit" className="w-full">
           Login
         </Button>
-        <SignInButton>Login with Google</SignInButton>
+        {/* <SignInButton>Login with Google</SignInButton> */}
         <div className="text-center text-sm">
           Don&apos;t have an account?{" "}
           <a href="#" className="underline underline-offset-4">
-            Sign up
+            Contact Admin
           </a>
         </div>
       </div>
