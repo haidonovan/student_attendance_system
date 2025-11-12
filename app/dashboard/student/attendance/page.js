@@ -276,7 +276,7 @@ export default function StudentAttendanceHistory() {
       <header className="sticky top-0 z-50 backdrop-blur-md bg-white/10 dark:bg-gray-900/10 border-b border-white/20 dark:border-gray-700/50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/student-dashboard">
+            <Link href="/dashboard/student">
               <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Dashboard
@@ -303,7 +303,7 @@ export default function StudentAttendanceHistory() {
       <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Statistics Overview */}
         {attendanceStats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card className="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md border-white/20 dark:border-gray-700/50">
               <CardContent className="p-6 text-center">
                 <CircularProgress percentage={attendanceStats.presentPercentage} color="#10B981" />
@@ -338,7 +338,7 @@ export default function StudentAttendanceHistory() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md border-white/20 dark:border-gray-700/50">
+            {/* <Card className="bg-white/10 dark:bg-gray-800/50 backdrop-blur-md border-white/20 dark:border-gray-700/50">
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
@@ -361,7 +361,7 @@ export default function StudentAttendanceHistory() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
         )}
 
@@ -503,31 +503,30 @@ export default function StudentAttendanceHistory() {
                   icon: "🌅",
                   earned: true,
                   date: "Jan 10, 2025",
-                },
-                {
-                  id: 3,
-                  title: "Streak Master",
-                  description: "20+ day attendance streak",
-                  icon: "🔥",
-                  earned: false,
-                  progress: 75,
-                },
-                {
-                  id: 4,
-                  title: "Monthly Champion",
-                  description: "95%+ attendance this month",
-                  icon: "👑",
-                  earned: false,
-                  progress: 89,
-                },
+                }
+                // {
+                //   id: 3,
+                //   title: "Streak Master",
+                //   description: "20+ day attendance streak",
+                //   icon: "🔥",
+                //   earned: false,
+                //   progress: 75,
+                // },
+                // {
+                //   id: 4,
+                //   title: "Monthly Champion",
+                //   description: "95%+ attendance this month",
+                //   icon: "👑",
+                //   earned: false,
+                //   progress: 89,
+                // },
               ].map((achievement) => (
                 <div
                   key={achievement.id}
-                  className={`p-4 rounded-xl border transition-all hover:scale-105 ${
-                    achievement.earned
+                  className={`p-4 rounded-xl border transition-all hover:scale-105 ${achievement.earned
                       ? "bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/30"
                       : "bg-gray-500/10 border-gray-500/20"
-                  }`}
+                    }`}
                 >
                   <div className="text-center">
                     <div className="text-4xl mb-3">{achievement.icon}</div>
@@ -665,11 +664,10 @@ export default function StudentAttendanceHistory() {
                 return (
                   <div
                     key={i}
-                    className={`relative p-2 h-12 rounded-lg border transition-all hover:scale-105 cursor-pointer ${
-                      isCurrentMonth
+                    className={`relative p-2 h-12 rounded-lg border transition-all hover:scale-105 cursor-pointer ${isCurrentMonth
                         ? "border-white/20 bg-white/5 hover:bg-white/10"
                         : "border-gray-600/20 bg-gray-600/5 opacity-50"
-                    }`}
+                      }`}
                     onMouseEnter={() => dayData && setHoveredDate({ date: dateStr, data: dayData })}
                     onMouseLeave={() => setHoveredDate(null)}
                   >
