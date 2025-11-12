@@ -60,6 +60,7 @@ export async function GET(req) {
               role: true,
               phoneNumber: true,
               address: true,
+              birthDate: true,
             },
           },
           class: {
@@ -166,6 +167,9 @@ export async function GET(req) {
             email: true,
             image: true,
             role: true,
+            phoneNumber: true,
+            address: true,
+            birthDate: true,
           },
         },
         class: {
@@ -314,7 +318,7 @@ export async function POST(req) {
     }
 
     const body = await req.json()
-    const { fullName, studentId, gender, classId, userId } = body
+    const { fullName, studentId, gender, classId, email, password, image, birthDate, address, phoneNumber } = body
 
     // Validate required fields
     if (!fullName || !studentId) {
@@ -329,36 +333,66 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: "Student ID already exists" }), { status: 400 })
     }
 
-    // Create new student
-    const newStudent = await prisma.student.create({
-      data: {
-        fullName,
-        studentId,
-        gender: gender || "Not specified",
-        classId: classId || null,
-        userId: userId || null,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-            role: true,
-          },
-        },
-        class: {
-          select: {
-            id: true,
-            name: true,
-            section: true,
-          },
-        },
-      },
-    })
+    if (classId) {
+      const classExists = await prisma.class.findUnique({
+        where: { id: classId },
+      })
+      if (!classExists) {
+        return new Response(JSON.stringify({ error: "Class not found" }), { status: 400 })
+      }
+    }
 
-    return new Response(JSON.stringify({ success: true, student: newStudent }), { status: 201 })
+    try {
+      const newUser = await prisma.user.create({
+        data: {
+          name: fullName,
+          email: email || `student_${studentId}@school.local`,
+          password: password || "DefaultPassword123!",
+          image: image || null,
+          role: "STUDENT",
+          birthDate: birthDate ? new Date(birthDate) : null,
+          address: address || null,
+          phoneNumber: phoneNumber || null,
+        },
+      })
+
+      // Create student linked to user
+      const newStudent = await prisma.student.create({
+        data: {
+          fullName,
+          studentId,
+          gender: gender || "Not specified",
+          classId: classId || null,
+          userId: newUser.id,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+              role: true,
+              phoneNumber: true,
+              address: true,
+              birthDate: true,
+            },
+          },
+          class: {
+            select: {
+              id: true,
+              name: true,
+              section: true,
+            },
+          },
+        },
+      })
+
+      return new Response(JSON.stringify({ success: true, student: newStudent }), { status: 201 })
+    } catch (createErr) {
+      console.error("[v0] Student creation error:", createErr)
+      return new Response(JSON.stringify({ error: createErr.message || "Failed to create student" }), { status: 500 })
+    }
   } catch (err) {
     console.error(err)
     return new Response(JSON.stringify({ error: "Internal error" }), { status: 500 })
@@ -390,7 +424,7 @@ export async function PUT(req) {
     }
 
     const body = await req.json()
-    const { id, fullName, gender, classId } = body
+    const { id, fullName, gender, classId, email, image, birthDate, address, phoneNumber } = body
 
     // Validate required fields
     if (!id) {
@@ -400,9 +434,23 @@ export async function PUT(req) {
     // Verify student exists
     const existingStudent = await prisma.student.findUnique({
       where: { id },
+      include: { user: true },
     })
     if (!existingStudent) {
       return new Response(JSON.stringify({ error: "Student not found" }), { status: 404 })
+    }
+
+    if (email || image || birthDate || address || phoneNumber) {
+      await prisma.user.update({
+        where: { id: existingStudent.userId },
+        data: {
+          ...(email && { email }),
+          ...(image && { image }),
+          ...(birthDate && { birthDate: new Date(birthDate) }),
+          ...(address && { address }),
+          ...(phoneNumber && { phoneNumber }),
+        },
+      })
     }
 
     // Update student
@@ -421,6 +469,9 @@ export async function PUT(req) {
             email: true,
             image: true,
             role: true,
+            phoneNumber: true,
+            address: true,
+            birthDate: true,
           },
         },
         class: {

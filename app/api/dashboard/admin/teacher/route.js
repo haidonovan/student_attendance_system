@@ -61,6 +61,9 @@ export async function GET(req) {
               email: true,
               image: true,
               role: true,
+              address: true,
+              birthDate: true,
+              phoneNumber: true,
             },
           },
           classes: {
@@ -186,6 +189,9 @@ export async function GET(req) {
             email: true,
             image: true,
             role: true,
+            address: true,
+            birthDate: true,
+            phoneNumber: true,
           },
         },
         _count: {
@@ -322,21 +328,61 @@ export async function POST(req) {
     }
 
     const body = await req.json()
-    const { fullName, subject, bio, employeeId, userId } = body
+    const { fullName, subject, bio, employeeId, email, password, image, birthDate, address, phoneNumber } = body
 
     // Validate required fields
     if (!fullName) {
       return new Response(JSON.stringify({ error: "Full name is required" }), { status: 400 })
     }
 
-    // Create new teacher
+    let userData = {}
+
+    if (email) {
+      // Check if user with this email already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { email },
+      })
+
+      if (existingUser) {
+        userData = { connect: { id: existingUser.id } }
+      } else {
+        // Create new user with teacher role
+        userData = {
+          create: {
+            email,
+            name: fullName,
+            role: "TEACHER",
+            password: password || null,
+            image: image || null,
+            birthDate: birthDate ? new Date(birthDate) : null,
+            address: address || null,
+            phoneNumber: phoneNumber || null,
+          },
+        }
+      }
+    } else {
+      // Create user without email
+      userData = {
+        create: {
+          name: fullName,
+          role: "TEACHER",
+          password: password || null,
+          image: image || null,
+          birthDate: birthDate ? new Date(birthDate) : null,
+          address: address || null,
+          phoneNumber: phoneNumber || null,
+        },
+      }
+    }
+
+    // Create new teacher with user
     const newTeacher = await prisma.teacher.create({
       data: {
         fullName,
         subject: subject || null,
         bio: bio || null,
         employeeId: employeeId || null,
-        userId: userId || null,
+        user: userData,
       },
       include: {
         user: {
@@ -346,6 +392,9 @@ export async function POST(req) {
             email: true,
             image: true,
             role: true,
+            address: true,
+            birthDate: true,
+            phoneNumber: true,
           },
         },
       },
@@ -353,8 +402,8 @@ export async function POST(req) {
 
     return new Response(JSON.stringify({ success: true, teacher: newTeacher }), { status: 201 })
   } catch (err) {
-    console.error(err)
-    return new Response(JSON.stringify({ error: "Internal error" }), { status: 500 })
+    console.error("[v0] Teacher creation error:", err)
+    return new Response(JSON.stringify({ error: "Internal error", details: err.message }), { status: 500 })
   }
 }
 
@@ -383,7 +432,7 @@ export async function PUT(req) {
     }
 
     const body = await req.json()
-    const { id, fullName, subject, bio, employeeId } = body
+    const { id, fullName, subject, bio, employeeId, email, password, image, birthDate, address, phoneNumber } = body
 
     // Validate required fields
     if (!id) {
@@ -415,10 +464,28 @@ export async function PUT(req) {
             email: true,
             image: true,
             role: true,
+            address: true,
+            birthDate: true,
+            phoneNumber: true,
           },
         },
       },
     })
+
+    // Update user fields if provided
+    if (email || password || image || birthDate || address || phoneNumber) {
+      await prisma.user.update({
+        where: { id: updatedTeacher.userId },
+        data: {
+          ...(email && { email }),
+          ...(password && { password }),
+          ...(image && { image }),
+          ...(birthDate && { birthDate: new Date(birthDate) }),
+          ...(address && { address }),
+          ...(phoneNumber && { phoneNumber }),
+        },
+      })
+    }
 
     return new Response(JSON.stringify({ success: true, teacher: updatedTeacher }), { status: 200 })
   } catch (err) {
