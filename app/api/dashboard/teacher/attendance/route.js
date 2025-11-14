@@ -1,176 +1,150 @@
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req) {
   try {
-    const cookie = req.headers.get("cookie") || ""
-    const match = cookie.match(/sessionToken=([^;]+)/)
-    if (!match) {
-      return new Response(JSON.stringify({ error: "No session" }), { status: 401 })
+    const { searchParams } = new URL(req.url);
+    const standByClassId = searchParams.get("standByClassId");
+    const page = parseInt(searchParams.get("page")) || 1;
+    const pageSize = 10;
+
+    if (!standByClassId) {
+      return new Response(
+        JSON.stringify({ error: "standByClassId is required" }),
+        { status: 400 }
+      );
     }
 
-    const sessionToken = match[1]
-
-    // Verify session and get user
-    const session = await prisma.session.findUnique({
-      where: { sessionToken },
-      include: { user: true },
-    })
-
-    if (!session || new Date(session.expires) < new Date()) {
-      return new Response(JSON.stringify({ error: "Session expired" }), { status: 401 })
-    }
-
-    // Check if user is a teacher
-    if (session.user.role !== "TEACHER") {
-      return new Response(JSON.stringify({ error: "Unauthorized - Not a teacher" }), { status: 403 })
-    }
-
-    const userId = session.user.id
-
-    // Get query parameters for filtering
-    const url = new URL(req.url)
-    const classId = url.searchParams.get("classId")
-    const dateFrom = url.searchParams.get("dateFrom")
-    const dateTo = url.searchParams.get("dateTo")
-    const studentId = url.searchParams.get("studentId")
-
-    // Build dynamic where clause
-    const whereClause = {}
-
-    if (classId) {
-      whereClause.classId = classId
-    }
-
-    if (dateFrom || dateTo) {
-      whereClause.date = {}
-      if (dateFrom) {
-        whereClause.date.gte = new Date(dateFrom)
-      }
-      if (dateTo) {
-        whereClause.date.lte = new Date(dateTo)
-      }
-    }
-
-    if (studentId) {
-      whereClause.studentId = studentId
-    }
-
-    // Get teacher's classes
-    const teacher = await prisma.teacher.findUnique({
-      where: { userId },
-      include: {
-        classes: {
-          select: { id: true, name: true },
-        },
-      },
-    })
-
-    if (!teacher) {
-      return new Response(JSON.stringify({ error: "Teacher profile not found" }), { status: 404 })
-    }
-
-    const teacherClassIds = teacher.classes.map((c) => c.id)
-
-    // If classId is provided, verify it belongs to this teacher
-    if (classId && !teacherClassIds.includes(classId)) {
-      return new Response(JSON.stringify({ error: "Unauthorized - Class not found" }), { status: 403 })
-    }
-
-    // Fetch attendance records
-    const attendanceRecords = await prisma.attendance.findMany({
+    const students = await prisma.student.findMany({
       where: {
-        classId: classId
-          ? classId
-          : {
-              in: teacherClassIds,
-            },
-        ...whereClause,
+        standbyClassId: standByClassId,
       },
-      include: {
-        student: {
-          select: {
-            id: true,
-            fullName: true,
-            studentId: true,
-            gender: true,
-          },
-        },
-        class: {
-          select: {
-            id: true,
-            name: true,
-            section: true,
-          },
-        },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        fullName: true,
+        studentId: true,
       },
-      orderBy: [{ date: "desc" }, { student: { fullName: "asc" } }],
-      take: 500, // Limit records
-    })
+    });
 
-    // Group records by date and status
-    const groupedByDate = {}
-    attendanceRecords.forEach((record) => {
-      const dateKey = record.date.toISOString().split("T")[0]
-      if (!groupedByDate[dateKey]) {
-        groupedByDate[dateKey] = {
-          date: dateKey,
-          total: 0,
-          present: 0,
-          absent: 0,
-          late: 0,
-          excused: 0,
-          records: [],
-        }
-      }
-      groupedByDate[dateKey].records.push({
-        id: record.id,
-        studentId: record.student.id,
-        studentName: record.student.fullName,
-        studentCode: record.student.studentId,
-        className: record.class.name,
-        status: record.status,
-      })
-      groupedByDate[dateKey][record.status.toLowerCase()] += 1
-      groupedByDate[dateKey].total += 1
-    })
-
-    // Calculate summary statistics
-    const summary = {
-      totalRecords: attendanceRecords.length,
-      byStatus: {
-        present: 0,
-        absent: 0,
-        late: 0,
-        excused: 0,
+    const totalStudents = await prisma.student.count({
+      where: {
+        standbyClassId: standByClassId,
       },
-      attendancePercentage: 0,
-    }
-
-    attendanceRecords.forEach((record) => {
-      summary.byStatus[record.status.toLowerCase()] += 1
-    })
-
-    if (summary.totalRecords > 0) {
-      summary.attendancePercentage = Math.round(
-        ((summary.byStatus.present + summary.byStatus.late) / summary.totalRecords) * 100,
-      )
-    }
+    });
 
     return new Response(
       JSON.stringify({
-        teacher: {
-          id: teacher.id,
-          fullName: teacher.fullName,
-          classes: teacher.classes,
+        students,
+        pagination: {
+          page,
+          pageSize,
+          totalStudents,
+          totalPages: Math.ceil(totalStudents / pageSize),
         },
-        summary,
-        dateGroups: Object.values(groupedByDate),
-        records: attendanceRecords,
       }),
-      { status: 200 },
-    )
-  } catch (err) {
-    console.error(err)
-    return new Response(JSON.stringify({ error: "Internal error" }), { status: 500 })
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  } catch (error) {
+    console.error("[v0] GET Error:", error);
+    return new Response(
+      JSON.stringify({
+        error: "Failed to fetch students",
+        details: error.message,
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+}
+
+
+export async function POST(req) {
+  try {
+    const body = await req.json();
+    const { attendanceData, classId: standbyClassId } = body;
+
+    if (!attendanceData || !Array.isArray(attendanceData)) {
+      return new Response(
+        JSON.stringify({ error: "attendanceData must be an array" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!standbyClassId) {
+      return new Response(
+        JSON.stringify({ error: "standbyClassId is required" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // 1️⃣ Ensure Class exists for this StandbyClass
+    let classRecord = await prisma.class.findFirst({
+      where: { standbyClassId: standbyClassId }
+    });
+
+    if (!classRecord) {
+      // Get standby class info for naming
+      const standbyClass = await prisma.standbyClass.findUnique({
+        where: { id: standbyClassId },
+      });
+
+      if (!standbyClass) {
+        return new Response(
+          JSON.stringify({ error: "Standby class not found" }),
+          { status: 404, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      classRecord = await prisma.class.create({
+        data: {
+          name: standbyClass.name,        // copy standby class name
+          year: new Date().getFullYear(), // or use standbyClass.year if available
+          standbyClassId: standbyClass.id,
+          // teacherId: optional if needed
+        },
+      });
+    }
+
+    // 2️⃣ Save attendance
+    const savedRecords = await Promise.all(
+      attendanceData.map((record) =>
+        prisma.attendance.upsert({
+          where: {
+            studentId_date: {  // matches your @@unique([studentId, date])
+              studentId: record.studentId,
+              date: new Date(record.date),
+            },
+          },
+          update: {
+            status: record.status || "ABSENT",
+          },
+          create: {
+            studentId: record.studentId,
+            classId: classRecord.id,   // use the class id ensured above
+            date: new Date(record.date),
+            status: record.status || "ABSENT",
+          },
+        })
+      )
+    );
+
+    return new Response(
+      JSON.stringify({ success: true, attendance: savedRecords }),
+      { status: 201, headers: { "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("[v0] POST Error:", error);
+    return new Response(
+      JSON.stringify({
+        error: "Failed to save attendance",
+        details: error.message,
+        stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 }

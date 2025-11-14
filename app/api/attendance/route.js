@@ -1,93 +1,132 @@
-// app/api/attendance/route.js
-import { prisma } from '../../../lib/prisma';
-import { requireAuth } from '../auth-check';
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req) {
   try {
-    const { session, error, status } = await requireAuth();
-    if (error) {
-      return new Response(JSON.stringify({ error }), { status });
+    const { searchParams } = new URL(req.url);
+    const standByClassId = searchParams.get("standByClassId");
+    const page = parseInt(searchParams.get("page")) || 1;
+    const pageSize = 10;
+
+    if (!standByClassId) {
+      return new Response(
+        JSON.stringify({ error: "standByClassId is required" }),
+        { status: 400 }
+      );
     }
 
-    // Fetch user with profiles
-    const user = await prisma.user.findUnique({
-      where: { id: session.userId },
-      include: { studentProfile: true, teacherProfile: true },
-    });
-
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'User not found' }), { status: 404 });
-    }
-
-    let where = {};
-
-    // STUDENT can only see their own attendance
-    if (user.role === 'STUDENT') {
-      if (!user.studentProfile) {
-        return new Response(JSON.stringify({ error: 'No student profile found' }), { status: 403 });
-      }
-      where.studentId = user.studentProfile.id;
-    }
-
-    const attendanceRecords = await prisma.attendance.findMany({
-      where,
-      include: {
-        student: { include: { user: true, class: true } },
-        class: true,
+    const students = await prisma.student.findMany({
+      where: {
+        standbyClassId: standByClassId,
       },
-      orderBy: { date: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        fullName: true,
+        studentId: true,
+      },
     });
 
-    return new Response(JSON.stringify(attendanceRecords), { status: 200 });
+    const totalStudents = await prisma.student.count({
+      where: {
+        standbyClassId: standByClassId,
+      },
+    });
+
+    return new Response(
+      JSON.stringify({
+        students,
+        pagination: {
+          page,
+          pageSize,
+          totalStudents,
+          totalPages: Math.ceil(totalStudents / pageSize),
+        },
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
-    console.error(error);
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    console.error("[v0] GET Error:", error);
+    return new Response(
+      JSON.stringify({
+        error: "Failed to fetch students",
+        details: error.message,
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 }
 
-// POST, PUT, DELETE (Teacher/Admin only)
 export async function POST(req) {
   try {
-    const { session, error, status } = await requireAuth();
-    if (error) return new Response(JSON.stringify({ error }), { status });
+    const body = await req.json();
+    console.log("[v0] POST body received:", body);
+    const { attendanceData, standByClassId } = body;
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.userId },
+    if (!attendanceData || !Array.isArray(attendanceData)) {
+      return new Response(
+        JSON.stringify({ error: "attendanceData must be an array" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!standByClassId) {
+      return new Response(
+        JSON.stringify({ error: "standByClassId is required" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const classRecord = await prisma.class.findFirst({
+      where: {
+        standByClassId: standByClassId,
+        date: attendanceData[0]?.date ? new Date(attendanceData[0].date) : new Date(),
+      },
+      select: { id: true },
     });
 
-    if (!user || (user.role !== 'ADMIN' && user.role !== 'TEACHER')) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 });
+    if (!classRecord) {
+      return new Response(
+        JSON.stringify({ 
+          error: "No class record found for this standByClass on the selected date",
+          details: "Please ensure the class session exists in the database"
+        }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    const body = await req.json();
-    const { classId, records, date } = body;
+    console.log("[v0] Creating attendance records for classId:", classRecord.id);
+    
+    const createdAttendance = await Promise.all(
+      attendanceData.map((record) => {
+        console.log("[v0] Saving record:", record);
+        return prisma.attendance.create({
+          data: {
+            studentId: record.studentId,
+            classId: classRecord.id,
+            date: record.date ? new Date(record.date) : new Date(),
+            status: record.status || "ABSENT",
+          },
+        });
+      })
+    );
 
-    if (!classId || !records || !Array.isArray(records)) {
-      return new Response(JSON.stringify({ error: 'classId, date, and records array are required' }), { status: 400 });
-    }
-
-    const recordDate = date ? new Date(date) : new Date();
-    const results = [];
-
-    for (const rec of records) {
-      const { studentId, status } = rec;
-      if (!studentId || !status) continue;
-
-      const attendance = await prisma.attendance.upsert({
-        where: { studentId_date: { studentId, date: recordDate } },
-        update: { status },
-        create: { studentId, classId, date: recordDate, status },
-        include: { student: { include: { user: true, class: true } }, class: true },
-      });
-
-      results.push(attendance);
-    }
-
-    return new Response(JSON.stringify(results), { status: 201 });
+    return new Response(JSON.stringify({ success: true, attendance: createdAttendance }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
-    console.error(error);
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    console.error("[v0] POST Error:", error);
+    return new Response(
+      JSON.stringify({
+        error: "Failed to save attendance",
+        details: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 }
-
-// Similar logic can be added to PUT / DELETE with role check

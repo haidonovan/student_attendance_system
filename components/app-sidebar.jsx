@@ -1,3 +1,5 @@
+// this is app sidebar.jsx
+
 "use client"
 
 import { useEffect, useState } from "react";
@@ -40,7 +42,7 @@ const data = {
       icon: SquareTerminal,
       items: [
         { title: "General", url: "/dashboard/teacher" },
-        { title: "Check Attendance", url: "/dashboard/teacher/check-attendance" },
+        { title: "Check Attendance", url: "/dashboard/teacher/attendance" },
         { title: "Class", url: "/dashboard/teacher/class" },
         { title: "Report", url: "/dashboard/teacher/report" },
         { title: "History", url: "/dashboard/teacher/history" },
