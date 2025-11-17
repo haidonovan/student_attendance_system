@@ -122,9 +122,10 @@ model Teacher {
 
 model StandbyClass {
   id         String     @id @default(cuid())
-  name       String      // e.g. "Class A"
+  name       String     @unique // e.g. "Class A"
   section    String?     // optional, e.g. "Morning"
   year       Int?        // optional, e.g. 2025
+  classes    Class[]
 
   students   Student[]   // group of students assigned to this standby class
   createdAt  DateTime    @default(now())
@@ -138,7 +139,8 @@ model Class {
   section    String?
   year       Int
   teacherId  String?
-  standbyClassId String?       // this is what teacher selects to use in session
+  standbyClassId String?
+  standbyClass   StandbyClass? @relation(fields: [standbyClassId], references: [id])
 
   teacher    Teacher?    @relation(fields: [teacherId], references: [id])
   students   Student[]
@@ -161,7 +163,7 @@ model Attendance {
 
   createdAt  DateTime @default(now())
 
-  @@unique([studentId, date])
+  // @@unique([studentId, date])
 }
 
 enum AttendanceStatus {

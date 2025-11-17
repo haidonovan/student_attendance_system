@@ -82,7 +82,7 @@ export async function POST(req) {
 
     // 1️⃣ Ensure Class exists for this StandbyClass
     let classRecord = await prisma.class.findFirst({
-      where: { standbyClassId: standbyClassId }
+      where: { standbyClass: standbyClassId }
     });
 
     if (!classRecord) {
