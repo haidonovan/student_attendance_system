@@ -35,6 +35,9 @@ export default function CheckAttendancePage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
     const [teacherSubject, setTeacherSubject] = useState("")
+    const [teacherName, setTeacherName] = useState("");
+    const [userId, setUserId] = useState("");
+
 
     useEffect(() => {
         const fetchClassNames = async () => {
@@ -43,14 +46,52 @@ export default function CheckAttendancePage() {
                 if (!res.ok) throw new Error("Failed to fetch class names")
                 const data = await res.json()
                 setClassNames(data)
+                // console.log("Set class name: ", classNames)
             } catch (error) {
-                console.error("[v0] Error fetching class names:", error)
+                console.error("Error fetching class names:", error)
                 setError(error.message)
             }
         }
 
         fetchClassNames()
     }, [])
+
+    // useEffect(() => {
+    //     const fetchTeacherName = async () => {
+    //         try {
+    //             const res = await fetch("/api/me", { method: "GET" });
+    //             if (!res.ok) throw new Error("Failed to fetch class names")
+    //             const data = await res.json();
+
+    //             setTeacherName(data.user.id);
+    //             // console.log("Teacher Name: ", data.user.name, " test: ", teacherName)
+    //         } catch (error) {
+    //             console.error(`Error fetching teacher name: ${error}`);
+    //         }
+    //     };
+
+    //     fetchTeacherName();
+
+    // }, [teacherName])
+
+
+    useEffect(() => {
+        const fetchUserId = async () => {
+            try {
+                const res = await fetch("/api/me", { method: "GET" });
+                if (!res.ok) throw new Error("Failed to fetch class names")
+                const data = await res.json();
+
+                setUserId(data.user.id);
+                console.log("User ID : ", data.user.id, " test: ", userId)
+            } catch (error) {
+                console.error(`Error fetching teacher name: ${error}`);
+            }
+        };
+
+        fetchUserId();
+
+    }, [userId])
 
     useEffect(() => {
         const fetchTeacherSubject = async () => {
@@ -59,7 +100,7 @@ export default function CheckAttendancePage() {
                 const data = await res.json()
                 setTeacherSubject(data.subject)
             } catch (error) {
-                console.error("[v0] Error fetching subject:", error)
+                console.error(" Error fetching subject:", error)
             }
         }
 
@@ -85,8 +126,9 @@ export default function CheckAttendancePage() {
         try {
             setLoading(true)
             setError("")
+            // console.log("selected Class: ", selectedClass, " | page: ", page)
             const response = await fetch(
-                `/api/dashboard/teacher/attendance?standByClassId=${selectedClass}&page=${page}`
+                `/api/dashboard/teacher/attendance?className=${selectedClass}&page=${page}`
             )
             if (!response.ok) throw new Error("Failed to fetch students")
             const data = await response.json()
@@ -151,19 +193,31 @@ export default function CheckAttendancePage() {
     const handleSaveAttendance = async () => {
         try {
             const attendanceData = students.map(student => ({
-                studentId: student.id,
+                studentId: student.studentId,
                 status: attendance[student.id] || "ABSENT",
                 date: selectedDate
             }));
+
+            console.log(`ClassName: ${selectedClass} | User ID: ${userId} | attendance: ${JSON.stringify(attendanceData)}`);
 
             const response = await fetch("/api/dashboard/teacher/attendance", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
+                    className: selectedClass, // ✅ must match backend
+                    userId: userId,
                     attendanceData,
-                    classId: selectedClass, // ✅ must match backend
                 }),
             });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                console.log(`Error: ${data.error || "Unknown error"}`);
+            } else {
+                console.log("Attendance submitted successfully!");
+                console.log("Response:", data);
+            }
 
             if (!response.ok) throw new Error("Failed to save attendance")
             alert("Attendance saved successfully!")
@@ -283,7 +337,7 @@ export default function CheckAttendancePage() {
                                         </SelectTrigger>
                                         <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                                             {classNames.map((cls) => (
-                                                <SelectItem key={cls.id} value={cls.id} className="hover:bg-gray-100 dark:hover:bg-gray-700">
+                                                <SelectItem key={cls.id} value={cls.name} className="hover:bg-gray-100 dark:hover:bg-gray-700">
                                                     {cls.name}
                                                 </SelectItem>
                                             ))}
