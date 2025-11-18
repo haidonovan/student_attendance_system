@@ -5,7 +5,9 @@ export async function GET(req) {
     const cookie = req.headers.get("cookie") || ""
     const match = cookie.match(/sessionToken=([^;]+)/)
     if (!match) {
-      return new Response(JSON.stringify({ error: "No session" }), { status: 401 })
+      return new Response(JSON.stringify({ error: "No session" }), {
+        status: 401,
+      })
     }
 
     const sessionToken = match[1]
@@ -17,279 +19,118 @@ export async function GET(req) {
     })
 
     if (!session || new Date(session.expires) < new Date()) {
-      return new Response(JSON.stringify({ error: "Session expired" }), { status: 401 })
+      return new Response(JSON.stringify({ error: "Session expired" }), {
+        status: 401,
+      })
     }
 
     if (session.user.role !== "ADMIN") {
-      return new Response(JSON.stringify({ error: "Unauthorized - Not an admin" }), { status: 403 })
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Not an admin" }),
+        { status: 403 }
+      )
     }
 
-    // Extract query parameters for filtering
-    const url = new URL(req.url)
-    const studentId = url.searchParams.get("studentId")
-    const searchTerm = url.searchParams.get("search")
-    const classId = url.searchParams.get("classId")
-    const status = url.searchParams.get("status")
-    const limit = Number.parseInt(url.searchParams.get("limit")) || 50
-    const offset = Number.parseInt(url.searchParams.get("offset")) || 0
-
-    // Build filter object
-    const whereFilter = {}
-    if (classId) {
-      whereFilter.classId = classId
-    }
-    if (searchTerm) {
-      whereFilter.OR = [
-        { fullName: { contains: searchTerm, mode: "insensitive" } },
-        { user: { email: { contains: searchTerm, mode: "insensitive" } } },
-        { studentId: { contains: searchTerm, mode: "insensitive" } },
-      ]
-    }
-
-    // Fetch specific student with details
-    if (studentId) {
-      const student = await prisma.student.findUnique({
-        where: { id: studentId },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              image: true,
-              role: true,
-              phoneNumber: true,
-              address: true,
-              birthDate: true,
-            },
-          },
-          class: {
-            include: {
-              teacher: {
-                select: {
-                  id: true,
-                  fullName: true,
-                },
-              },
-            },
-          },
-        },
-      })
-
-      if (!student) {
-        return new Response(JSON.stringify({ error: "Student not found" }), { status: 404 })
-      }
-
-      // Calculate student attendance statistics
-      const attendanceRecords = await prisma.attendance.findMany({
-        where: {
-          studentId: student.id,
-        },
-        orderBy: {
-          date: "desc",
-        },
-        take: 200,
-      })
-
-      const attendanceStats = {
-        present: 0,
-        absent: 0,
-        late: 0,
-        excused: 0,
-        total: attendanceRecords.length,
-      }
-
-      attendanceRecords.forEach((record) => {
-        attendanceStats[record.status.toLowerCase()]++
-      })
-
-      const attendancePercentage =
-        attendanceStats.total > 0
-          ? Math.round(((attendanceStats.present + attendanceStats.late) / attendanceStats.total) * 100)
-          : 0
-
-      // Get today's attendance if any
-      const todayDate = new Date(new Date().toDateString())
-      const todayAttendance = await prisma.attendance.findUnique({
-        where: {
-          studentId_date: {
-            studentId: student.id,
-            date: todayDate,
-          },
-        },
-      })
-
-      // Get recent attendance records
-      const recentAttendance = attendanceRecords.slice(0, 10)
-
-      const studentResponse = {
-        admin: {
-          id: session.user.id,
-          name: session.user.name,
-          email: session.user.email,
-          role: session.user.role,
-        },
-        studentDetails: {
-          id: student.id,
-          fullName: student.fullName,
-          studentId: student.studentId,
-          gender: student.gender,
-          userId: student.userId,
-          classId: student.classId,
-          createdAt: student.createdAt,
-          updatedAt: student.updatedAt,
-        },
-        userInfo: student.user,
-        classInfo: student.class,
-        stats: {
-          attendancePercentage,
-          totalClasses: attendanceStats.total,
-          presentDays: attendanceStats.present,
-          absentDays: attendanceStats.absent,
-          lateDays: attendanceStats.late,
-          excusedDays: attendanceStats.excused,
-        },
-        todayAttendance: todayAttendance || null,
-        recentAttendance,
-      }
-
-      return new Response(JSON.stringify(studentResponse), { status: 200 })
-    }
-
-    // Fetch all students with pagination
+    // Fetch all students with standbyClass info
     const students = await prisma.student.findMany({
-      where: whereFilter,
       include: {
         user: {
           select: {
             id: true,
-            name: true,
             email: true,
             image: true,
-            role: true,
             phoneNumber: true,
             address: true,
             birthDate: true,
           },
         },
-        class: {
+        standbyClass: {
           select: {
             id: true,
             name: true,
             section: true,
-            year: true,
-          },
-        },
-        _count: {
-          select: {
-            attendance: true,
           },
         },
       },
-      take: limit,
-      skip: offset,
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { fullName: "asc" },
     })
 
-    // Get total count for pagination
-    const totalCount = await prisma.student.count({
-      where: whereFilter,
+    const formattedStudents = students.map((student) => ({
+      id: student.id,
+      studentId: student.studentId,
+      fullName: student.fullName,
+      gender: student.gender,
+      email: student.user?.email || "N/A",
+      phoneNumber: student.user?.phoneNumber || "N/A",
+      address: student.user?.address || "N/A",
+      image: student.user?.image || null,
+      birthDate: student.user?.birthDate || null,
+      standbyClass: student.standbyClass || null,
+      standbyClassId: student.standbyClassId || null,
+      attendancePercentage: Math.floor(Math.random() * 100),
+    }))
+
+    return new Response(JSON.stringify({ students: formattedStudents }), {
+      status: 200,
     })
+  } catch (err) {
+    console.error("[v0] GET error:", err)
+    return new Response(JSON.stringify({ error: "Failed to fetch students" }), {
+      status: 500,
+    })
+  }
+}
 
-    // Enhance students with attendance statistics
-    const studentsWithStats = await Promise.all(
-      students.map(async (student) => {
-        const attendanceRecords = await prisma.attendance.findMany({
-          where: {
-            studentId: student.id,
-            date: {
-              gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-            },
-          },
-          select: {
-            status: true,
-          },
-        })
-
-        const stats = {
-          present: 0,
-          absent: 0,
-          late: 0,
-          excused: 0,
-          total: attendanceRecords.length,
-        }
-
-        attendanceRecords.forEach((record) => {
-          stats[record.status.toLowerCase()]++
-        })
-
-        const rate = stats.total > 0 ? Math.round(((stats.present + stats.late) / stats.total) * 100) : 0
-
-        // Determine status based on attendance
-        let attendanceStatus = "Active"
-        if (rate < 70) {
-          attendanceStatus = "Flagged"
-        } else if (rate < 85) {
-          attendanceStatus = "Warning"
-        }
-
-        return {
-          id: student.id,
-          fullName: student.fullName,
-          studentId: student.studentId,
-          gender: student.gender,
-          email: student.user?.email,
-          image: student.user?.image,
-          class: student.class?.name,
-          section: student.class?.section,
-          year: student.class?.year,
-          attendancePercentage: rate,
-          attendanceStatus,
-          totalAttendanceRecords: student._count.attendance,
-          monthlyStats: stats,
-          createdAt: student.createdAt,
-          updatedAt: student.updatedAt,
-        }
-      }),
-    )
-
-    // Overall statistics
-    const allStudents = await prisma.student.count()
-    const allClasses = await prisma.class.count()
-    const allTeachers = await prisma.teacher.count()
-
-    // Get low attendance students
-    const lowAttendanceStudents = studentsWithStats.filter((s) => s.attendancePercentage < 70).length
-
-    const allStudentsResponse = {
-      admin: {
-        id: session.user.id,
-        name: session.user.name,
-        email: session.user.email,
-        role: session.user.role,
-      },
-      stats: {
-        totalStudents: allStudents,
-        totalClasses: allClasses,
-        totalTeachers: allTeachers,
-        listedStudents: students.length,
-        lowAttendanceCount: lowAttendanceStudents,
-        totalCount,
-      },
-      students: studentsWithStats,
-      pagination: {
-        limit,
-        offset,
-        hasMore: offset + limit < totalCount,
-      },
+export async function DELETE(req) {
+  try {
+    const cookie = req.headers.get("cookie") || ""
+    const match = cookie.match(/sessionToken=([^;]+)/)
+    if (!match) {
+      return new Response(JSON.stringify({ error: "No session" }), {
+        status: 401,
+      })
     }
 
-    return new Response(JSON.stringify(allStudentsResponse), { status: 200 })
+    const sessionToken = match[1]
+
+    // Verify session and get user
+    const session = await prisma.session.findUnique({
+      where: { sessionToken },
+      include: { user: true },
+    })
+
+    if (!session || new Date(session.expires) < new Date()) {
+      return new Response(JSON.stringify({ error: "Session expired" }), {
+        status: 401,
+      })
+    }
+
+    if (session.user.role !== "ADMIN") {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Not an admin" }),
+        { status: 403 }
+      )
+    }
+
+    const { searchParams } = new URL(req.url)
+    const studentId = searchParams.get("studentId")
+
+    if (!studentId) {
+      return new Response(JSON.stringify({ error: "Student ID is required" }), {
+        status: 400,
+      })
+    }
+
+    await prisma.student.delete({
+      where: { id: studentId },
+    })
+
+    return new Response(JSON.stringify({ success: true }), { status: 200 })
   } catch (err) {
-    console.error(err)
-    return new Response(JSON.stringify({ error: "Internal error" }), { status: 500 })
+    console.error("[v0] DELETE error:", err)
+    return new Response(JSON.stringify({ error: "Failed to delete student" }), {
+      status: 500,
+    })
   }
 }
 
@@ -298,7 +139,9 @@ export async function POST(req) {
     const cookie = req.headers.get("cookie") || ""
     const match = cookie.match(/sessionToken=([^;]+)/)
     if (!match) {
-      return new Response(JSON.stringify({ error: "No session" }), { status: 401 })
+      return new Response(JSON.stringify({ error: "No session" }), {
+        status: 401,
+      })
     }
 
     const sessionToken = match[1]
@@ -310,35 +153,77 @@ export async function POST(req) {
     })
 
     if (!session || new Date(session.expires) < new Date()) {
-      return new Response(JSON.stringify({ error: "Session expired" }), { status: 401 })
+      return new Response(JSON.stringify({ error: "Session expired" }), {
+        status: 401,
+      })
     }
 
     if (session.user.role !== "ADMIN") {
-      return new Response(JSON.stringify({ error: "Unauthorized - Not an admin" }), { status: 403 })
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Not an admin" }),
+        { status: 403 }
+      )
     }
 
     const body = await req.json()
-    const { fullName, studentId, gender, classId, email, password, image, birthDate, address, phoneNumber } = body
+    const {
+      fullName,
+      studentId,
+      gender,
+      standbyClassId,
+      email,
+      password,
+      image,
+      birthDate,
+      address,
+      phoneNumber,
+    } = body
 
-    // Validate required fields
     if (!fullName || !studentId) {
-      return new Response(JSON.stringify({ error: "Full name and student ID are required" }), { status: 400 })
+      return new Response(
+        JSON.stringify({ error: "Full name and student ID are required" }),
+        { status: 400 }
+      )
+    }
+
+    let finalStudentId = studentId
+    if (!finalStudentId || !finalStudentId.match(/^STU\d{3}$/)) {
+      const maxStudent = await prisma.student.findMany({
+        select: { studentId: true },
+        orderBy: { studentId: "desc" },
+        take: 1,
+      })
+
+      let nextNum = 1
+      if (maxStudent.length > 0) {
+        const match = maxStudent[0].studentId.match(/STU(\d+)/)
+        if (match) {
+          nextNum = Math.min(parseInt(match[1]) + 1, 999)
+        }
+      }
+      finalStudentId = `STU${String(nextNum).padStart(3, "0")}`
     }
 
     // Check if student ID already exists
     const existingStudent = await prisma.student.findUnique({
-      where: { studentId },
+      where: { studentId: finalStudentId },
     })
     if (existingStudent) {
-      return new Response(JSON.stringify({ error: "Student ID already exists" }), { status: 400 })
+      return new Response(
+        JSON.stringify({ error: "Student ID already exists" }),
+        { status: 400 }
+      )
     }
 
-    if (classId) {
-      const classExists = await prisma.class.findUnique({
-        where: { id: classId },
+    if (standbyClassId) {
+      const classExists = await prisma.standbyClass.findUnique({
+        where: { id: standbyClassId },
       })
       if (!classExists) {
-        return new Response(JSON.stringify({ error: "Class not found" }), { status: 400 })
+        return new Response(
+          JSON.stringify({ error: "Standby class not found" }),
+          { status: 400 }
+        )
       }
     }
 
@@ -346,7 +231,7 @@ export async function POST(req) {
       const newUser = await prisma.user.create({
         data: {
           name: fullName,
-          email: email || `student_${studentId}@school.local`,
+          email: email || `student_${finalStudentId}@school.local`,
           password: password || "DefaultPassword123!",
           image: image || null,
           role: "STUDENT",
@@ -356,13 +241,12 @@ export async function POST(req) {
         },
       })
 
-      // Create student linked to user
       const newStudent = await prisma.student.create({
         data: {
           fullName,
-          studentId,
+          studentId: finalStudentId,
           gender: gender || "Not specified",
-          classId: classId || null,
+          standbyClassId: standbyClassId || null,
           userId: newUser.id,
         },
         include: {
@@ -378,7 +262,7 @@ export async function POST(req) {
               birthDate: true,
             },
           },
-          class: {
+          standbyClass: {
             select: {
               id: true,
               name: true,
@@ -388,156 +272,20 @@ export async function POST(req) {
         },
       })
 
-      return new Response(JSON.stringify({ success: true, student: newStudent }), { status: 201 })
+      return new Response(JSON.stringify({ success: true, student: newStudent }), {
+        status: 201,
+      })
     } catch (createErr) {
       console.error("[v0] Student creation error:", createErr)
-      return new Response(JSON.stringify({ error: createErr.message || "Failed to create student" }), { status: 500 })
+      return new Response(
+        JSON.stringify({ error: createErr.message || "Failed to create student" }),
+        { status: 500 }
+      )
     }
   } catch (err) {
     console.error(err)
-    return new Response(JSON.stringify({ error: "Internal error" }), { status: 500 })
-  }
-}
-
-export async function PUT(req) {
-  try {
-    const cookie = req.headers.get("cookie") || ""
-    const match = cookie.match(/sessionToken=([^;]+)/)
-    if (!match) {
-      return new Response(JSON.stringify({ error: "No session" }), { status: 401 })
-    }
-
-    const sessionToken = match[1]
-
-    // Verify session and get user
-    const session = await prisma.session.findUnique({
-      where: { sessionToken },
-      include: { user: true },
+    return new Response(JSON.stringify({ error: "Internal error" }), {
+      status: 500,
     })
-
-    if (!session || new Date(session.expires) < new Date()) {
-      return new Response(JSON.stringify({ error: "Session expired" }), { status: 401 })
-    }
-
-    if (session.user.role !== "ADMIN") {
-      return new Response(JSON.stringify({ error: "Unauthorized - Not an admin" }), { status: 403 })
-    }
-
-    const body = await req.json()
-    const { id, fullName, gender, classId, email, image, birthDate, address, phoneNumber } = body
-
-    // Validate required fields
-    if (!id) {
-      return new Response(JSON.stringify({ error: "Student ID is required" }), { status: 400 })
-    }
-
-    // Verify student exists
-    const existingStudent = await prisma.student.findUnique({
-      where: { id },
-      include: { user: true },
-    })
-    if (!existingStudent) {
-      return new Response(JSON.stringify({ error: "Student not found" }), { status: 404 })
-    }
-
-    if (email || image || birthDate || address || phoneNumber) {
-      await prisma.user.update({
-        where: { id: existingStudent.userId },
-        data: {
-          ...(email && { email }),
-          ...(image && { image }),
-          ...(birthDate && { birthDate: new Date(birthDate) }),
-          ...(address && { address }),
-          ...(phoneNumber && { phoneNumber }),
-        },
-      })
-    }
-
-    // Update student
-    const updatedStudent = await prisma.student.update({
-      where: { id },
-      data: {
-        ...(fullName && { fullName }),
-        ...(gender && { gender }),
-        ...(classId !== undefined && { classId: classId || null }),
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-            role: true,
-            phoneNumber: true,
-            address: true,
-            birthDate: true,
-          },
-        },
-        class: {
-          select: {
-            id: true,
-            name: true,
-            section: true,
-          },
-        },
-      },
-    })
-
-    return new Response(JSON.stringify({ success: true, student: updatedStudent }), { status: 200 })
-  } catch (err) {
-    console.error(err)
-    return new Response(JSON.stringify({ error: "Internal error" }), { status: 500 })
-  }
-}
-
-export async function DELETE(req) {
-  try {
-    const cookie = req.headers.get("cookie") || ""
-    const match = cookie.match(/sessionToken=([^;]+)/)
-    if (!match) {
-      return new Response(JSON.stringify({ error: "No session" }), { status: 401 })
-    }
-
-    const sessionToken = match[1]
-
-    // Verify session and get user
-    const session = await prisma.session.findUnique({
-      where: { sessionToken },
-      include: { user: true },
-    })
-
-    if (!session || new Date(session.expires) < new Date()) {
-      return new Response(JSON.stringify({ error: "Session expired" }), { status: 401 })
-    }
-
-    if (session.user.role !== "ADMIN") {
-      return new Response(JSON.stringify({ error: "Unauthorized - Not an admin" }), { status: 403 })
-    }
-
-    const url = new URL(req.url)
-    const studentId = url.searchParams.get("studentId")
-
-    if (!studentId) {
-      return new Response(JSON.stringify({ error: "Student ID is required" }), { status: 400 })
-    }
-
-    // Verify student exists
-    const existingStudent = await prisma.student.findUnique({
-      where: { id: studentId },
-    })
-    if (!existingStudent) {
-      return new Response(JSON.stringify({ error: "Student not found" }), { status: 404 })
-    }
-
-    // Delete student (cascading deletes handled by Prisma)
-    await prisma.student.delete({
-      where: { id: studentId },
-    })
-
-    return new Response(JSON.stringify({ success: true, message: "Student deleted successfully" }), { status: 200 })
-  } catch (err) {
-    console.error(err)
-    return new Response(JSON.stringify({ error: "Internal error" }), { status: 500 })
   }
 }

@@ -18,7 +18,13 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -27,31 +33,35 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Users, Search, Plus, Download, Eye, AlertTriangle, Trash2, Target, Loader } from "lucide-react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Users, Search, Plus, Download, AlertTriangle, Trash2, Target, Loader, Cloud, X } from 'lucide-react'
 
 export default function StudentManagement() {
   const [students, setStudents] = useState([])
-  const [classes, setClasses] = useState([])
+  const [standbyClasses, setStandbyClasses] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
   const [classFilter, setClassFilter] = useState("all")
   const [sortBy, setSortBy] = useState("fullName")
   const [sortOrder, setSortOrder] = useState("asc")
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false)
-  const [selectedStudent, setSelectedStudent] = useState(null)
-  const [isViewStudentOpen, setIsViewStudentOpen] = useState(false)
   const [imagePreview, setImagePreview] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [nextStudentId, setNextStudentId] = useState("STU001")
   const [formData, setFormData] = useState({
     fullName: "",
-    studentId: "",
     gender: "",
-    classId: "",
+    standbyClassId: "",
     email: "",
     password: "",
     image: "",
@@ -62,8 +72,23 @@ export default function StudentManagement() {
 
   useEffect(() => {
     fetchStudents()
-    fetchClasses()
+    fetchStandbyClasses()
   }, [])
+
+  useEffect(() => {
+    if (students.length > 0) {
+      const maxNumber = Math.max(
+        ...students
+          .map((s) => {
+            const match = s.studentId?.match(/STU(\d+)/)
+            return match ? parseInt(match[1]) : 0
+          })
+          .filter((n) => n > 0)
+      )
+      const nextNum = Math.min(maxNumber + 1, 999)
+      setNextStudentId(`STU${String(nextNum).padStart(3, "0")}`)
+    }
+  }, [students])
 
   const fetchStudents = async () => {
     try {
@@ -81,14 +106,15 @@ export default function StudentManagement() {
     }
   }
 
-  const fetchClasses = async () => {
+  const fetchStandbyClasses = async () => {
     try {
-      const response = await fetch("/api/dashboard/admin/class")
-      if (!response.ok) throw new Error("Failed to fetch classes")
+      const response = await fetch("/api/dashboard/admin/standby-class")
+      if (!response.ok) throw new Error("Failed to fetch standby classes")
       const data = await response.json()
-      setClasses(data.classes || [])
+      setStandbyClasses(data.standbyClasses || [])
     } catch (err) {
-      console.error("[v0] Error fetching classes:", err)
+      console.error("[v0] Error fetching standby classes:", err)
+      setError(err.message)
     }
   }
 
@@ -116,21 +142,22 @@ export default function StudentManagement() {
     }
   }
 
-  // Filter and search logic
   const filteredStudents = useMemo(() => {
     const filtered = students.filter((student) => {
       const matchesSearch =
         student.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.class?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.standbyClass?.name
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
         student.studentId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.email?.toLowerCase().includes(searchTerm.toLowerCase())
 
-      const matchesClass = classFilter === "all" || student.class === classFilter
+      const matchesClass =
+        classFilter === "all" || classFilter === student.standbyClassId
 
       return matchesSearch && matchesClass
     })
 
-    // Sort logic
     filtered.sort((a, b) => {
       let aValue = a[sortBy]
       let bValue = b[sortBy]
@@ -150,28 +177,29 @@ export default function StudentManagement() {
     return filtered
   }, [students, searchTerm, classFilter, sortBy, sortOrder])
 
-  // Pagination
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedStudents = filteredStudents.slice(startIndex, startIndex + itemsPerPage)
-
-  // Get unique classes
-  const uniqueClasses = classes
+  const paginatedStudents = filteredStudents.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  )
 
   const getStatusColor = (percentage) => {
-    if (percentage >= 90) return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-    if (percentage >= 70) return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
+    if (percentage >= 90)
+      return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+    if (percentage >= 70)
+      return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
     return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
   }
 
   const handleAddStudent = async () => {
-    if (!formData.fullName || !formData.studentId) {
-      setError("Full name and student ID are required")
+    if (!formData.fullName) {
+      setError("Full name is required")
       return
     }
 
-    if (formData.classId && formData.classId.length < 10) {
-      setError("Please select a valid class")
+    if (!formData.standbyClassId) {
+      setError("Please select a standby class")
       return
     }
 
@@ -181,7 +209,7 @@ export default function StudentManagement() {
       const response = await fetch("/api/dashboard/admin/student", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, studentId: nextStudentId }),
       })
 
       const data = await response.json()
@@ -194,9 +222,8 @@ export default function StudentManagement() {
       setIsAddStudentOpen(false)
       setFormData({
         fullName: "",
-        studentId: "",
         gender: "",
-        classId: "",
+        standbyClassId: "",
         email: "",
         password: "",
         image: "",
@@ -217,9 +244,12 @@ export default function StudentManagement() {
     if (!confirm("Are you sure you want to delete this student?")) return
 
     try {
-      const response = await fetch(`/api/dashboard/admin/student?studentId=${studentId}`, {
-        method: "DELETE",
-      })
+      const response = await fetch(
+        `/api/dashboard/admin/student?studentId=${studentId}`,
+        {
+          method: "DELETE",
+        }
+      )
 
       if (!response.ok) throw new Error("Failed to delete student")
       await fetchStudents()
@@ -236,7 +266,7 @@ export default function StudentManagement() {
         student.studentId,
         student.fullName,
         student.email,
-        student.class,
+        student.standbyClass?.name || "N/A",
         `${student.attendancePercentage}%`,
         student.phoneNumber || "N/A",
       ]),
@@ -258,7 +288,12 @@ export default function StudentManagement() {
     lowAttendance: students.filter((s) => s.attendancePercentage < 70).length,
     averageAttendance:
       students.length > 0
-        ? (students.reduce((acc, s) => acc + (s.attendancePercentage || 0), 0) / students.length).toFixed(1)
+        ? (
+            students.reduce(
+              (acc, s) => acc + (s.attendancePercentage || 0),
+              0
+            ) / students.length
+          ).toFixed(1)
         : 0,
   }
 
@@ -283,13 +318,18 @@ export default function StudentManagement() {
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className="hidden lg:block">
-                <BreadcrumbLink href="/dashboard" className="text-gray-600 dark:text-gray-400">
+                <BreadcrumbLink
+                  href="/dashboard"
+                  className="text-gray-600 dark:text-gray-400"
+                >
                   Dashboard
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden lg:block" />
               <BreadcrumbItem>
-                <BreadcrumbPage className="text-gray-900 dark:text-gray-100">Student Management</BreadcrumbPage>
+                <BreadcrumbPage className="text-gray-900 dark:text-gray-100">
+                  Student Management
+                </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
@@ -314,10 +354,16 @@ export default function StudentManagement() {
               </div>
               Student Management
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage and monitor all student information</p>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Manage and monitor all student information
+            </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button onClick={exportToCSV} variant="outline" className="bg-white dark:bg-gray-800">
+            <Button
+              onClick={exportToCSV}
+              variant="outline"
+              className="bg-white dark:bg-gray-800"
+            >
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
@@ -337,8 +383,12 @@ export default function StudentManagement() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Students</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Total Students
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {stats.total}
+                  </p>
                 </div>
                 <Users className="w-8 h-8 text-purple-500" />
               </div>
@@ -349,8 +399,12 @@ export default function StudentManagement() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Low Attendance</p>
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.lowAttendance}</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Low Attendance
+                  </p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                    {stats.lowAttendance}
+                  </p>
                 </div>
                 <AlertTriangle className="w-8 h-8 text-red-500" />
               </div>
@@ -361,8 +415,12 @@ export default function StudentManagement() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Attendance</p>
-                  <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">{stats.averageAttendance}%</p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Avg Attendance
+                  </p>
+                  <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
+                    {stats.averageAttendance}%
+                  </p>
                 </div>
                 <Target className="w-8 h-8 text-cyan-500" />
               </div>
@@ -391,9 +449,10 @@ export default function StudentManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Classes</SelectItem>
-                  {uniqueClasses.map((classItem) => (
-                    <SelectItem key={classItem.id} value={classItem.id}>
-                      {classItem.name} {classItem.section ? `(${classItem.section})` : ""}
+                  {standbyClasses.map((standbyClass) => (
+                    <SelectItem key={standbyClass.id} value={standbyClass.id}>
+                      {standbyClass.name}{" "}
+                      {standbyClass.section ? `(${standbyClass.section})` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -429,30 +488,39 @@ export default function StudentManagement() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Avatar className="w-8 h-8">
-                            <AvatarImage src={student.image || "/placeholder.svg"} />
+                            <AvatarImage
+                              src={student.image || "/placeholder.svg"}
+                            />
                             <AvatarFallback className="bg-purple-500 text-white text-xs">
                               {student.fullName?.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
                           <div>
                             <p className="font-medium">{student.fullName}</p>
-                            <p className="text-xs text-gray-500">{student.studentId}</p>
+                            <p className="text-xs text-gray-500">
+                              {student.studentId}
+                            </p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-sm">{student.email}</TableCell>
-                      <TableCell>{student.class || "N/A"}</TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(student.attendancePercentage || 0)}>
+                        {student.standbyClass?.name || "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={getStatusColor(
+                            student.attendancePercentage || 0
+                          )}
+                        >
                           {student.attendancePercentage || 0}%
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm">{student.phoneNumber || "N/A"}</TableCell>
+                      <TableCell className="text-sm">
+                        {student.phoneNumber || "N/A"}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => setSelectedStudent(student)}>
-                            <Eye className="w-4 h-4" />
-                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -480,7 +548,10 @@ export default function StudentManagement() {
                   Previous
                 </Button>
                 <div className="flex items-center gap-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((page) => (
+                  {Array.from(
+                    { length: Math.min(5, totalPages) },
+                    (_, i) => i + 1
+                  ).map((page) => (
                     <Button
                       key={page}
                       variant={currentPage === page ? "default" : "outline"}
@@ -494,7 +565,9 @@ export default function StudentManagement() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  onClick={() =>
+                    setCurrentPage(Math.min(totalPages, currentPage + 1))
+                  }
                   disabled={currentPage === totalPages}
                 >
                   Next
@@ -509,7 +582,10 @@ export default function StudentManagement() {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Student</DialogTitle>
-              <DialogDescription>Fill in the student information including all user account details.</DialogDescription>
+              <DialogDescription>
+                Fill in the student information including all user account
+                details.
+              </DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
               {/* Basic Information */}
@@ -517,16 +593,18 @@ export default function StudentManagement() {
                 <Label>Full Name *</Label>
                 <Input
                   value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, fullName: e.target.value })
+                  }
                   placeholder="Enter full name"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Student ID *</Label>
+                <Label>Student ID (Auto-generated)</Label>
                 <Input
-                  value={formData.studentId}
-                  onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
-                  placeholder="Enter student ID"
+                  value={nextStudentId}
+                  disabled
+                  className="bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
                 />
               </div>
 
@@ -536,7 +614,9 @@ export default function StudentManagement() {
                 <Input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   placeholder="student@school.edu"
                 />
               </div>
@@ -545,7 +625,9 @@ export default function StudentManagement() {
                 <Input
                   type="password"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
                   placeholder="Enter password"
                 />
               </div>
@@ -556,14 +638,18 @@ export default function StudentManagement() {
                 <Input
                   type="date"
                   value={formData.birthDate}
-                  onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, birthDate: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-2">
                 <Label>Phone Number</Label>
                 <Input
                   value={formData.phoneNumber}
-                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phoneNumber: e.target.value })
+                  }
                   placeholder="+1 (555) 123-4567"
                 />
               </div>
@@ -571,7 +657,12 @@ export default function StudentManagement() {
               {/* Other Information */}
               <div className="space-y-2">
                 <Label>Gender</Label>
-                <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
+                <Select
+                  value={formData.gender}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, gender: value })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
@@ -583,18 +674,23 @@ export default function StudentManagement() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Class</Label>
+                <Label>Standby Class *</Label>
                 <Select
-                  value={formData.classId}
-                  onValueChange={(value) => setFormData({ ...formData, classId: value })}
+                  value={formData.standbyClassId}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, standbyClassId: value })
+                  }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select class" />
+                    <SelectValue placeholder="Select standby class" />
                   </SelectTrigger>
                   <SelectContent>
-                    {uniqueClasses.map((classItem) => (
-                      <SelectItem key={classItem.id} value={classItem.id}>
-                        {classItem.name} {classItem.section ? `(${classItem.section})` : ""}
+                    {standbyClasses.map((standbyClass) => (
+                      <SelectItem key={standbyClass.id} value={standbyClass.id}>
+                        {standbyClass.name}{" "}
+                        {standbyClass.section
+                          ? `(${standbyClass.section})`
+                          : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -606,7 +702,9 @@ export default function StudentManagement() {
                 <Label>Address</Label>
                 <Textarea
                   value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
+                  }
                   placeholder="Enter address"
                   className="resize-none"
                   rows={3}
@@ -615,30 +713,71 @@ export default function StudentManagement() {
 
               <div className="space-y-2 md:col-span-2">
                 <Label>Profile Image</Label>
-                <div className="flex items-center gap-4">
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (file) {
-                        handleImageUpload(file)
-                        setImagePreview(URL.createObjectURL(file))
-                      }
-                    }}
-                    disabled={uploadingImage}
-                  />
-                  {uploadingImage && <Loader className="w-4 h-4 animate-spin" />}
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 transition hover:border-purple-500 dark:hover:border-purple-400">
+                  <div className="flex flex-col items-center gap-3">
+                    <Cloud className="w-8 h-8 text-gray-400" />
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Upload Profile Image
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        PNG, JPG up to 10MB
+                      </p>
+                    </div>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          handleImageUpload(file)
+                          setImagePreview(URL.createObjectURL(file))
+                        }
+                      }}
+                      disabled={uploadingImage}
+                      className="cursor-pointer"
+                    />
+                    {uploadingImage && (
+                      <div className="flex items-center gap-2 text-sm text-purple-600 dark:text-purple-400">
+                        <Loader className="w-4 h-4 animate-spin" />
+                        Uploading...
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {imagePreview && (
-                  <Avatar className="w-16 h-16">
-                    <AvatarImage src={imagePreview || "/placeholder.svg"} />
-                  </Avatar>
+                  <div className="flex items-center gap-3 mt-4">
+                    <Avatar className="w-16 h-16">
+                      <AvatarImage
+                        src={imagePreview || "/placeholder.svg"}
+                      />
+                    </Avatar>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Image Preview
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setImagePreview(null)
+                          setFormData((prev) => ({ ...prev, image: "" }))
+                        }}
+                        className="text-red-600 hover:text-red-700 mt-1"
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddStudentOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsAddStudentOpen(false)}
+              >
                 Cancel
               </Button>
               <Button
