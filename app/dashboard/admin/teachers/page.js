@@ -12,20 +12,7 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
 import { useState, useEffect } from "react"
-import {
-  Search,
-  Plus,
-  Download,
-  MoreVertical,
-  Mail,
-  BookOpen,
-  Edit,
-  Trash2,
-  Eye,
-  Users,
-  TrendingUp,
-  Loader2,
-} from "lucide-react"
+import { Search, Plus, Download, MoreVertical, Mail, BookOpen, Edit, Trash2, Eye, Users, TrendingUp, Loader2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -120,6 +107,39 @@ export default function TeacherManagement() {
     } catch (err) {
       console.error("[v0] Error deleting teacher:", err)
       setError(err.message)
+    }
+  }
+
+  const handleExportTeachers = () => {
+    try {
+      const csvContent = [
+        ["Employee ID", "Full Name", "Subject", "Bio", "Email", "Classes", "Students", "Attendance Rate"],
+        ...filteredTeachers.map((teacher) => [
+          teacher.employeeId,
+          teacher.fullName,
+          teacher.subject || "N/A",
+          teacher.bio || "N/A",
+          teacher.email || "N/A",
+          teacher.classCount || 0,
+          teacher.studentCount || 0,
+          teacher.todayAttendanceRate + "%",
+        ]),
+      ]
+        .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+        .join("\n")
+
+      const blob = new Blob([csvContent], { type: "text/csv" })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `teachers_${new Date().toISOString().split("T")[0]}.csv`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error("[v0] Export error:", err)
+      setError("Failed to export teachers")
     }
   }
 
@@ -222,6 +242,7 @@ export default function TeacherManagement() {
                 Add Teacher
               </Button>
               <Button
+                onClick={handleExportTeachers}
                 variant="outline"
                 className="border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 bg-transparent"
               >
@@ -316,8 +337,8 @@ export default function TeacherManagement() {
                   <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Teacher</th>
                   <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Subject</th>
                   <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Classes</th>
-                  {/* <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Students</th> */}
-                  {/* <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Attendance Rate</th> */}
+                  <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Students</th>
+                  <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Attendance Rate</th>
                   <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Actions</th>
                 </tr>
               </thead>
@@ -350,15 +371,15 @@ export default function TeacherManagement() {
                       <td className="p-4">
                         <Badge variant="outline">{teacher.classCount || 0} classes</Badge>
                       </td>
-                      {/* <td className="p-4">
+                      <td className="p-4">
                         <div className="flex items-center space-x-2">
                           <Users className="h-4 w-4 text-slate-400" />
                           <span className="font-medium text-slate-900 dark:text-slate-100">
                             {teacher.studentCount || 0}
                           </span>
                         </div>
-                      </td> */}
-                      {/* <td className="p-4">
+                      </td>
+                      <td className="p-4">
                         <div className="flex items-center space-x-2">
                           <div className="w-32 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                             <div
@@ -372,7 +393,7 @@ export default function TeacherManagement() {
                             {teacher.todayAttendanceRate}%
                           </span>
                         </div>
-                      </td> */}
+                      </td>
                       <td className="p-4">
                         <div className="flex items-center space-x-2">
                           <Button
@@ -567,14 +588,65 @@ function AddTeacherModal({ isOpen, onClose, onAdd }) {
     fullName: "",
     subject: "",
     bio: "",
-    employeeId: "",
     email: "",
     password: "",
-    image: "",
+    image: null,
+    imagePreview: "",
     birthDate: "",
     address: "",
     phoneNumber: "",
   })
+  const [uploading, setUploading] = useState(false)
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setFormData((prev) => ({
+        ...prev,
+        imagePreview: reader.result,
+      }))
+    }
+    reader.readAsDataURL(file)
+
+    // Upload to server
+    setUploading(true)
+    try {
+      const uploadFormData = new FormData()
+      uploadFormData.append("file", file)
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: uploadFormData,
+      })
+
+      if (!response.ok) {
+        throw new Error("Image upload failed")
+      }
+
+      const data = await response.json()
+      setFormData((prev) => ({
+        ...prev,
+        image: data.url,
+      }))
+    } catch (err) {
+      console.error("[v0] Image upload error:", err)
+      alert("Failed to upload image")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleRemoveImage = () => {
+    setFormData((prev) => ({
+      ...prev,
+      image: null,
+      imagePreview: "",
+    }))
+  }
 
   const handleSubmit = () => {
     if (!formData.fullName) {
@@ -586,10 +658,10 @@ function AddTeacherModal({ isOpen, onClose, onAdd }) {
       fullName: "",
       subject: "",
       bio: "",
-      employeeId: "",
       email: "",
       password: "",
-      image: "",
+      image: null,
+      imagePreview: "",
       birthDate: "",
       address: "",
       phoneNumber: "",
@@ -619,15 +691,6 @@ function AddTeacherModal({ isOpen, onClose, onAdd }) {
                 />
               </div>
               <div>
-                <Label htmlFor="employeeId">Employee ID</Label>
-                <Input
-                  id="employeeId"
-                  placeholder="e.g., TCH00001"
-                  value={formData.employeeId}
-                  onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                />
-              </div>
-              <div>
                 <Label htmlFor="subject">Subject</Label>
                 <Input
                   id="subject"
@@ -636,7 +699,7 @@ function AddTeacherModal({ isOpen, onClose, onAdd }) {
                   onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                 />
               </div>
-              <div>
+              <div className="md:col-span-2">
                 <Label htmlFor="bio">Bio</Label>
                 <Input
                   id="bio"
@@ -644,6 +707,61 @@ function AddTeacherModal({ isOpen, onClose, onAdd }) {
                   value={formData.bio}
                   onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Profile Image */}
+          <div className="border-t pt-4">
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-3">Profile Image</h3>
+            <div className="space-y-3">
+              {formData.imagePreview ? (
+                <div className="relative w-32 h-32">
+                  <img
+                    src={formData.imagePreview || "/placeholder.svg"}
+                    alt="Preview"
+                    className="w-full h-full object-cover rounded-lg border border-slate-200 dark:border-slate-700"
+                  />
+                  <button
+                    onClick={handleRemoveImage}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : null}
+              <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-6 text-center hover:border-slate-400 transition-colors">
+                <input
+                  type="file"
+                  id="image"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  disabled={uploading}
+                  className="hidden"
+                />
+                <label htmlFor="image" className="cursor-pointer block">
+                  {uploading ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span>Uploading...</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="text-slate-600 dark:text-slate-400">
+                        <svg className="h-8 w-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          />
+                        </svg>
+                      </div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Click to upload profile image</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">PNG, JPG, GIF up to 10MB</p>
+                    </div>
+                  )}
+                </label>
               </div>
             </div>
           </div>
@@ -670,15 +788,6 @@ function AddTeacherModal({ isOpen, onClose, onAdd }) {
                   placeholder="Enter password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="image">Profile Image URL</Label>
-                <Input
-                  id="image"
-                  placeholder="https://example.com/image.jpg"
-                  value={formData.image}
-                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                 />
               </div>
             </div>
@@ -725,6 +834,7 @@ function AddTeacherModal({ isOpen, onClose, onAdd }) {
             <Button
               className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700"
               onClick={handleSubmit}
+              disabled={uploading}
             >
               Add Teacher
             </Button>

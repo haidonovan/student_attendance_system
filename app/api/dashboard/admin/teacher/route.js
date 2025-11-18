@@ -82,14 +82,16 @@ export async function GET(req) {
         return new Response(JSON.stringify({ error: "Teacher not found" }), { status: 404 })
       }
 
-      // Calculate teacher statistics
-      const totalStudents = await prisma.student.count({
-        where: {
-          class: {
-            teacherId: teacher.id,
+      // Get all unique standbyClasses from teacher's classes
+      const standbyClassIds = teacher.classes.map(c => c.standbyClassId).filter(Boolean)
+      let totalStudents = 0
+      if (standbyClassIds.length > 0) {
+        totalStudents = await prisma.student.count({
+          where: {
+            standbyClassId: { in: standbyClassIds },
           },
-        },
-      })
+        })
+      }
 
       const classesWithAttendance = await Promise.all(
         teacher.classes.map(async (cls) => {
@@ -123,6 +125,7 @@ export async function GET(req) {
             name: cls.name,
             section: cls.section,
             year: cls.year,
+            standbyClassId: cls.standbyClassId,
             studentCount: cls._count.students,
             todayAttendanceRate: rate,
           }
@@ -194,9 +197,15 @@ export async function GET(req) {
             phoneNumber: true,
           },
         },
-        _count: {
+        classes: {
           select: {
-            classes: true,
+            id: true,
+            standbyClassId: true,
+            _count: {
+              select: {
+                students: true,
+              },
+            },
           },
         },
       },
@@ -212,23 +221,23 @@ export async function GET(req) {
       where: whereFilter,
     })
 
-    // Enhance teachers with additional stats
     const teachersWithStats = await Promise.all(
       teachers.map(async (teacher) => {
-        const studentCount = await prisma.student.count({
-          where: {
-            class: {
-              teacherId: teacher.id,
+        // Get standbyClass IDs from teacher's classes
+        const standbyClassIds = teacher.classes.map(c => c.standbyClassId).filter(Boolean)
+        let studentCount = 0
+        if (standbyClassIds.length > 0) {
+          studentCount = await prisma.student.count({
+            where: {
+              standbyClassId: { in: standbyClassIds },
             },
-          },
-        })
+          })
+        }
 
         const todayAttendance = await prisma.attendance.groupBy({
           by: ["status"],
           where: {
-            class: {
-              teacherId: teacher.id,
-            },
+            classId: { in: teacher.classes.map(c => c.id) },
             date: {
               gte: new Date(new Date().toDateString()),
             },
@@ -259,7 +268,7 @@ export async function GET(req) {
           employeeId: teacher.employeeId,
           email: teacher.user?.email,
           image: teacher.user?.image,
-          classCount: teacher._count.classes,
+          classCount: teacher.classes.length,
           studentCount,
           todayAttendanceRate: rate,
           todayStats: stats,
@@ -328,12 +337,31 @@ export async function POST(req) {
     }
 
     const body = await req.json()
-    const { fullName, subject, bio, employeeId, email, password, image, birthDate, address, phoneNumber } = body
+    const { fullName, subject, bio, email, password, image, birthDate, address, phoneNumber } = body
 
     // Validate required fields
     if (!fullName) {
       return new Response(JSON.stringify({ error: "Full name is required" }), { status: 400 })
     }
+
+    const lastTeacher = await prisma.teacher.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 1,
+    })
+
+    let nextNumber = 1
+    if (lastTeacher.length > 0 && lastTeacher[0].employeeId) {
+      const match = lastTeacher[0].employeeId.match(/TCH(\d+)/)
+      if (match) {
+        nextNumber = parseInt(match[1]) + 1
+      }
+    }
+
+    if (nextNumber > 9999) {
+      return new Response(JSON.stringify({ error: "Teacher ID limit reached (TCH9999)" }), { status: 400 })
+    }
+
+    const newEmployeeId = `TCH${String(nextNumber).padStart(4, "0")}`
 
     let userData = {}
 
@@ -381,7 +409,7 @@ export async function POST(req) {
         fullName,
         subject: subject || null,
         bio: bio || null,
-        employeeId: employeeId || null,
+        employeeId: newEmployeeId,
         user: userData,
       },
       include: {
@@ -533,14 +561,21 @@ export async function DELETE(req) {
       return new Response(JSON.stringify({ error: "Teacher not found" }), { status: 404 })
     }
 
-    // Delete teacher (cascading deletes handled by Prisma)
+    const userId = existingTeacher.userId
+
+    // Delete teacher
     await prisma.teacher.delete({
       where: { id: teacherId },
     })
 
+    // Delete user
+    await prisma.user.delete({
+      where: { id: userId },
+    })
+
     return new Response(JSON.stringify({ success: true, message: "Teacher deleted successfully" }), { status: 200 })
   } catch (err) {
-    console.error(err)
-    return new Response(JSON.stringify({ error: "Internal error" }), { status: 500 })
+    console.error("[v0] Delete teacher error:", err)
+    return new Response(JSON.stringify({ error: "Failed to delete teacher", details: err.message }), { status: 500 })
   }
 }

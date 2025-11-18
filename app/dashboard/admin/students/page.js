@@ -378,6 +378,7 @@ export default function StudentManagement() {
         </div>
 
         {/* Stats Cards */}
+        
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             <CardContent className="p-6">
@@ -474,7 +475,7 @@ export default function StudentManagement() {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Class</TableHead>
-                    <TableHead>Attendance</TableHead>
+                    {/* <TableHead>Attendance</TableHead> */}
                     <TableHead>Phone</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -507,7 +508,7 @@ export default function StudentManagement() {
                       <TableCell>
                         {student.standbyClass?.name || "N/A"}
                       </TableCell>
-                      <TableCell>
+                      {/* <TableCell>
                         <Badge
                           className={getStatusColor(
                             student.attendancePercentage || 0
@@ -515,7 +516,7 @@ export default function StudentManagement() {
                         >
                           {student.attendancePercentage || 0}%
                         </Badge>
-                      </TableCell>
+                      </TableCell> */}
                       <TableCell className="text-sm">
                         {student.phoneNumber || "N/A"}
                       </TableCell>
