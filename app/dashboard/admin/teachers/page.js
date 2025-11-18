@@ -316,8 +316,8 @@ export default function TeacherManagement() {
                   <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Teacher</th>
                   <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Subject</th>
                   <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Classes</th>
-                  <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Students</th>
-                  <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Attendance Rate</th>
+                  {/* <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Students</th> */}
+                  {/* <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Attendance Rate</th> */}
                   <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Actions</th>
                 </tr>
               </thead>
@@ -350,15 +350,15 @@ export default function TeacherManagement() {
                       <td className="p-4">
                         <Badge variant="outline">{teacher.classCount || 0} classes</Badge>
                       </td>
-                      <td className="p-4">
+                      {/* <td className="p-4">
                         <div className="flex items-center space-x-2">
                           <Users className="h-4 w-4 text-slate-400" />
                           <span className="font-medium text-slate-900 dark:text-slate-100">
                             {teacher.studentCount || 0}
                           </span>
                         </div>
-                      </td>
-                      <td className="p-4">
+                      </td> */}
+                      {/* <td className="p-4">
                         <div className="flex items-center space-x-2">
                           <div className="w-32 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                             <div
@@ -372,7 +372,7 @@ export default function TeacherManagement() {
                             {teacher.todayAttendanceRate}%
                           </span>
                         </div>
-                      </td>
+                      </td> */}
                       <td className="p-4">
                         <div className="flex items-center space-x-2">
                           <Button

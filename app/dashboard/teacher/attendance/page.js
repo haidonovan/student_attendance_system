@@ -38,6 +38,9 @@ export default function CheckAttendancePage() {
     const [teacherName, setTeacherName] = useState("");
     const [userId, setUserId] = useState("");
 
+    const [allStudents, setAllStudents] = useState([]);
+
+
 
     useEffect(() => {
         const fetchClassNames = async () => {
@@ -117,7 +120,8 @@ export default function CheckAttendancePage() {
     ]
 
     useEffect(() => {
-        if (selectedClass && selectedSession) {
+        if (selectedClass) {
+            setAllStudents([]); // reset for new class
             fetchStudents(1)
         }
     }, [selectedClass, selectedSession])
@@ -133,9 +137,17 @@ export default function CheckAttendancePage() {
             if (!response.ok) throw new Error("Failed to fetch students")
             const data = await response.json()
             setStudents(data.students)
+
+            // Merge new students into allStudents
+            setAllStudents((prev) => {
+                const ids = new Set(prev.map(s => s.studentId));
+                const newStudents = data.students.filter(s => !ids.has(s.studentId));
+                return [...prev, ...newStudents];
+            });
+
             setCurrentPage(page)
             setTotalPages(data.pagination.totalPages)
-            setAttendance({})
+            // setAttendance({})
         } catch (err) {
             setError(err.message)
             console.error("[v0] Error fetching students:", err)
@@ -192,11 +204,12 @@ export default function CheckAttendancePage() {
 
     const handleSaveAttendance = async () => {
         try {
-            const attendanceData = students.map(student => ({
-                studentId: student.studentId,
-                status: attendance[student.id] || "ABSENT",
+            const attendanceData = Object.keys(attendance).map(studentId => ({
+                studentId,
+                status: attendance[studentId] || "ABSENT",
                 date: selectedDate
             }));
+
 
             console.log(`ClassName: ${selectedClass} | User ID: ${userId} | attendance: ${JSON.stringify(attendanceData)}`);
 
@@ -221,7 +234,7 @@ export default function CheckAttendancePage() {
 
             if (!response.ok) throw new Error("Failed to save attendance")
             alert("Attendance saved successfully!")
-            setAttendance({})
+            // setAttendance({})
             fetchStudents(currentPage)
         } catch (err) {
             setError(err.message)
@@ -236,15 +249,16 @@ export default function CheckAttendancePage() {
     )
 
     const getAttendanceSummary = () => {
-        const total = filteredStudents.length
-        const present = Object.values(attendance).filter((a) => a === "PRESENT").length
-        const absent = Object.values(attendance).filter((a) => a === "ABSENT").length
-        const late = Object.values(attendance).filter((a) => a === "LATE").length
-        const excused = Object.values(attendance).filter((a) => a === "EXCUSED").length
-        const unmarked = total - Object.keys(attendance).length
+        const total = allStudents.length;
+        const present = Object.values(attendance).filter(a => a === "PRESENT").length;
+        const absent = Object.values(attendance).filter(a => a === "ABSENT").length;
+        const late = Object.values(attendance).filter(a => a === "LATE").length;
+        const excused = Object.values(attendance).filter(a => a === "EXCUSED").length;
+        const unmarked = total - Object.keys(attendance).length;
 
-        return { total, present, absent, late, excused, unmarked }
-    }
+        return { total, present, absent, late, excused, unmarked };
+    };
+
 
     const summary = getAttendanceSummary()
 
@@ -369,7 +383,7 @@ export default function CheckAttendancePage() {
                                     />
                                 </div>
 
-                                <div className="space-y-2">
+                                {/* <div className="space-y-2">
                                     <Label htmlFor="session" className="text-gray-700 dark:text-gray-300 text-sm">
                                         Time Slot
                                     </Label>
@@ -389,7 +403,7 @@ export default function CheckAttendancePage() {
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                </div>
+                                </div> */}
                             </div>
                         </CardContent>
                     </Card>
@@ -514,13 +528,13 @@ export default function CheckAttendancePage() {
                                                     <div className="flex items-center gap-1 sm:gap-2">
                                                         {attendanceOptions.map((option) => {
                                                             const Icon = option.icon
-                                                            const isSelected = attendance[student.id] === option.value
+                                                            const isSelected = attendance[student.studentId] === option.value
                                                             return (
                                                                 <Button
                                                                     key={option.value}
                                                                     variant={isSelected ? "default" : "outline"}
                                                                     size="sm"
-                                                                    onClick={() => handleAttendanceChange(student.id, option.value)}
+                                                                    onClick={() => handleAttendanceChange(student.studentId, option.value)}
                                                                     className={`
                                     h-8 px-2 sm:px-3 text-xs sm:text-sm min-w-0
                                     ${isSelected
@@ -588,13 +602,13 @@ export default function CheckAttendancePage() {
                                             {Object.keys(attendance).length} of {filteredStudents.length} students marked
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <Button
+                                            {/* <Button
                                                 variant="outline"
                                                 className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-sm"
                                                 size="sm"
                                             >
                                                 Save as Draft
-                                            </Button>
+                                            </Button> */}
                                             <Button
                                                 className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
                                                 size="sm"
