@@ -30,6 +30,7 @@ export default function TeacherManagement() {
   const [subjectFilter, setSubjectFilter] = useState("all")
   const [selectedTeacher, setSelectedTeacher] = useState(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [editingTeacherId, setEditingTeacherId] = useState(null)
   const [teachers, setTeachers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -71,24 +72,37 @@ export default function TeacherManagement() {
 
   const handleAddTeacher = async (formData) => {
     try {
-      const response = await fetch("/api/dashboard/admin/teacher", {
-        method: "POST",
+      const method = editingTeacherId ? "PUT" : "POST"
+      const url = editingTeacherId ? "/api/dashboard/admin/teacher" : "/api/dashboard/admin/teacher"
+      
+      const payload = editingTeacherId 
+        ? { ...formData, id: editingTeacherId }
+        : formData
+
+      const response = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to add teacher")
+        throw new Error(editingTeacherId ? "Failed to update teacher" : "Failed to add teacher")
       }
 
       await fetchTeachers()
       setIsAddModalOpen(false)
+      setEditingTeacherId(null)
     } catch (err) {
-      console.error("[v0] Error adding teacher:", err)
+      console.error("[v0] Error:", err)
       setError(err.message)
     }
+  }
+
+  const handleEditTeacher = (teacher) => {
+    setEditingTeacherId(teacher.id)
+    setIsAddModalOpen(true)
   }
 
   const handleDeleteTeacher = async (teacherId) => {
@@ -146,8 +160,8 @@ export default function TeacherManagement() {
   // Filter teachers based on search and filters
   const filteredTeachers = teachers.filter((teacher) => {
     const matchesSearch =
-      teacher.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      teacher.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      teacher.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      teacher.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       teacher.employeeId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       teacher.subject?.toLowerCase().includes(searchTerm.toLowerCase())
 
@@ -204,7 +218,7 @@ export default function TeacherManagement() {
             </BreadcrumbItem>
             <BreadcrumbSeparator className="hidden md:block" />
             <BreadcrumbItem>
-              <BreadcrumbPage className="text-gray-900 dark:text-gray-100">Teacher Management</BreadcrumbPage>
+              <BreadcrumbPage className="text-gray-900 dark:text-slate-100">Teacher Management</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -235,7 +249,10 @@ export default function TeacherManagement() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
-                onClick={() => setIsAddModalOpen(true)}
+                onClick={() => {
+                  setEditingTeacherId(null)
+                  setIsAddModalOpen(true)
+                }}
                 className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -337,8 +354,8 @@ export default function TeacherManagement() {
                   <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Teacher</th>
                   <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Subject</th>
                   <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Classes</th>
-                  <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Students</th>
-                  <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Attendance Rate</th>
+                  {/* <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Students</th> */}
+                  {/* <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Attendance Rate</th> */}
                   <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Actions</th>
                 </tr>
               </thead>
@@ -371,15 +388,15 @@ export default function TeacherManagement() {
                       <td className="p-4">
                         <Badge variant="outline">{teacher.classCount || 0} classes</Badge>
                       </td>
-                      <td className="p-4">
+                      {/* <td className="p-4">
                         <div className="flex items-center space-x-2">
                           <Users className="h-4 w-4 text-slate-400" />
                           <span className="font-medium text-slate-900 dark:text-slate-100">
                             {teacher.studentCount || 0}
                           </span>
                         </div>
-                      </td>
-                      <td className="p-4">
+                      </td> */}
+                      {/* <td className="p-4">
                         <div className="flex items-center space-x-2">
                           <div className="w-32 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                             <div
@@ -393,7 +410,7 @@ export default function TeacherManagement() {
                             {teacher.todayAttendanceRate}%
                           </span>
                         </div>
-                      </td>
+                      </td> */}
                       <td className="p-4">
                         <div className="flex items-center space-x-2">
                           <Button
@@ -411,7 +428,7 @@ export default function TeacherManagement() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEditTeacher(teacher)}>
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit Teacher
                               </DropdownMenuItem>
@@ -577,13 +594,21 @@ export default function TeacherManagement() {
         </Dialog>
       )}
 
-      {/* Add Teacher Modal */}
-      <AddTeacherModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onAdd={handleAddTeacher} />
+      {/* Add/Edit Teacher Modal */}
+      <AddTeacherModal 
+        isOpen={isAddModalOpen} 
+        onClose={() => {
+          setIsAddModalOpen(false)
+          setEditingTeacherId(null)
+        }} 
+        onAdd={handleAddTeacher}
+        editingTeacher={editingTeacherId ? teachers.find(t => t.id === editingTeacherId) : null}
+      />
     </div>
   )
 }
 
-function AddTeacherModal({ isOpen, onClose, onAdd }) {
+function AddTeacherModal({ isOpen, onClose, onAdd, editingTeacher }) {
   const [formData, setFormData] = useState({
     fullName: "",
     subject: "",
@@ -597,6 +622,36 @@ function AddTeacherModal({ isOpen, onClose, onAdd }) {
     phoneNumber: "",
   })
   const [uploading, setUploading] = useState(false)
+
+  useEffect(() => {
+    if (editingTeacher) {
+      setFormData({
+        fullName: editingTeacher.fullName,
+        subject: editingTeacher.subject || "",
+        bio: editingTeacher.bio || "",
+        email: editingTeacher.email || "",
+        password: "", // Don't populate password on edit
+        image: editingTeacher.image || null,
+        imagePreview: editingTeacher.image || "",
+        birthDate: editingTeacher.birthDate || "",
+        address: editingTeacher.address || "",
+        phoneNumber: editingTeacher.phoneNumber || "",
+      })
+    } else {
+      setFormData({
+        fullName: "",
+        subject: "",
+        bio: "",
+        email: "",
+        password: "",
+        image: null,
+        imagePreview: "",
+        birthDate: "",
+        address: "",
+        phoneNumber: "",
+      })
+    }
+  }, [editingTeacher, isOpen])
 
   const handleImageChange = async (e) => {
     const file = e.target.files?.[0]
@@ -673,7 +728,7 @@ function AddTeacherModal({ isOpen, onClose, onAdd }) {
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
-            Add New Teacher
+            {editingTeacher ? "Edit Teacher" : "Add New Teacher"}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
@@ -780,16 +835,18 @@ function AddTeacherModal({ isOpen, onClose, onAdd }) {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                />
-              </div>
+              {!editingTeacher && (
+                <div>
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -836,7 +893,7 @@ function AddTeacherModal({ isOpen, onClose, onAdd }) {
               onClick={handleSubmit}
               disabled={uploading}
             >
-              Add Teacher
+              {editingTeacher ? "Update Teacher" : "Add Teacher"}
             </Button>
           </div>
         </div>

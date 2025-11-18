@@ -41,7 +41,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Users, Search, Plus, Download, AlertTriangle, Trash2, Target, Loader, Cloud, X } from 'lucide-react'
+import { Users, Search, Plus, Download, AlertTriangle, Trash2, Target, Loader, Cloud, X, Edit } from 'lucide-react'
 
 export default function StudentManagement() {
   const [students, setStudents] = useState([])
@@ -55,6 +55,8 @@ export default function StudentManagement() {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editingStudentId, setEditingStudentId] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [nextStudentId, setNextStudentId] = useState("STU001")
@@ -192,6 +194,24 @@ export default function StudentManagement() {
     return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
   }
 
+  const handleEditStudent = (student) => {
+    setEditingStudentId(student.id)
+    setFormData({
+      fullName: student.fullName || "",
+      gender: student.gender || "",
+      standbyClassId: student.standbyClassId || "",
+      email: student.email || "",
+      password: "",
+      image: student.image || "",
+      birthDate: student.birthDate ? student.birthDate.split('T')[0] : "",
+      address: student.address || "",
+      phoneNumber: student.phoneNumber || "",
+    })
+    setImagePreview(student.image || null)
+    setIsEditMode(true)
+    setIsAddStudentOpen(true)
+  }
+
   const handleAddStudent = async () => {
     if (!formData.fullName) {
       setError("Full name is required")
@@ -206,20 +226,38 @@ export default function StudentManagement() {
     try {
       setLoading(true)
       setError(null)
+      
+      const method = isEditMode ? "PUT" : "POST"
+      const body = isEditMode 
+        ? { 
+            id: editingStudentId,
+            fullName: formData.fullName,
+            gender: formData.gender,
+            standbyClassId: formData.standbyClassId,
+            email: formData.email,
+            image: formData.image,
+            birthDate: formData.birthDate,
+            address: formData.address,
+            phoneNumber: formData.phoneNumber,
+          }
+        : { ...formData, studentId: nextStudentId }
+
       const response = await fetch("/api/dashboard/admin/student", {
-        method: "POST",
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, studentId: nextStudentId }),
+        body: JSON.stringify(body),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || `Failed to add student (${response.status})`)
+        throw new Error(data.error || `Failed to ${isEditMode ? 'update' : 'add'} student (${response.status})`)
       }
 
       await fetchStudents()
       setIsAddStudentOpen(false)
+      setIsEditMode(false)
+      setEditingStudentId(null)
       setFormData({
         fullName: "",
         gender: "",
@@ -233,8 +271,8 @@ export default function StudentManagement() {
       })
       setImagePreview(null)
     } catch (err) {
-      console.error("[v0] Error adding student:", err)
-      setError(err.message || "Failed to add student")
+      console.error("[v0] Error:", err)
+      setError(err.message || `Failed to ${isEditMode ? 'update' : 'add'} student`)
     } finally {
       setLoading(false)
     }
@@ -368,7 +406,23 @@ export default function StudentManagement() {
               Export
             </Button>
             <Button
-              onClick={() => setIsAddStudentOpen(true)}
+              onClick={() => {
+                setIsEditMode(false)
+                setEditingStudentId(null)
+                setFormData({
+                  fullName: "",
+                  gender: "",
+                  standbyClassId: "",
+                  email: "",
+                  password: "",
+                  image: "",
+                  birthDate: "",
+                  address: "",
+                  phoneNumber: "",
+                })
+                setImagePreview(null)
+                setIsAddStudentOpen(true)
+              }}
               className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -378,7 +432,6 @@ export default function StudentManagement() {
         </div>
 
         {/* Stats Cards */}
-        
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
             <CardContent className="p-6">
@@ -475,7 +528,7 @@ export default function StudentManagement() {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Class</TableHead>
-                    {/* <TableHead>Attendance</TableHead> */}
+                    <TableHead>Attendance</TableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -508,7 +561,7 @@ export default function StudentManagement() {
                       <TableCell>
                         {student.standbyClass?.name || "N/A"}
                       </TableCell>
-                      {/* <TableCell>
+                      <TableCell>
                         <Badge
                           className={getStatusColor(
                             student.attendancePercentage || 0
@@ -516,12 +569,20 @@ export default function StudentManagement() {
                         >
                           {student.attendancePercentage || 0}%
                         </Badge>
-                      </TableCell> */}
+                      </TableCell>
                       <TableCell className="text-sm">
                         {student.phoneNumber || "N/A"}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditStudent(student)}
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -578,14 +639,15 @@ export default function StudentManagement() {
           </CardContent>
         </Card>
 
-        {/* Add Student Dialog */}
+        {/* Add/Edit Student Dialog */}
         <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Add New Student</DialogTitle>
+              <DialogTitle>{isEditMode ? "Edit Student" : "Add New Student"}</DialogTitle>
               <DialogDescription>
-                Fill in the student information including all user account
-                details.
+                {isEditMode 
+                  ? "Update the student information." 
+                  : "Fill in the student information including all user account details."}
               </DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
@@ -601,9 +663,9 @@ export default function StudentManagement() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Student ID (Auto-generated)</Label>
+                <Label>Student ID {!isEditMode && "(Auto-generated)"}</Label>
                 <Input
-                  value={nextStudentId}
+                  value={isEditMode ? students.find(s => s.id === editingStudentId)?.studentId : nextStudentId}
                   disabled
                   className="bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
                 />
@@ -621,17 +683,19 @@ export default function StudentManagement() {
                   placeholder="student@school.edu"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Password</Label>
-                <Input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  placeholder="Enter password"
-                />
-              </div>
+              {!isEditMode && (
+                <div className="space-y-2">
+                  <Label>Password</Label>
+                  <Input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    placeholder="Enter password"
+                  />
+                </div>
+              )}
 
               {/* Contact Information */}
               <div className="space-y-2">
@@ -777,7 +841,10 @@ export default function StudentManagement() {
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => setIsAddStudentOpen(false)}
+                onClick={() => {
+                  setIsAddStudentOpen(false)
+                  setIsEditMode(false)
+                }}
               >
                 Cancel
               </Button>
@@ -786,7 +853,7 @@ export default function StudentManagement() {
                 disabled={loading}
                 className="bg-gradient-to-r from-purple-500 to-violet-600"
               >
-                {loading ? "Adding..." : "Add Student"}
+                {loading ? (isEditMode ? "Updating..." : "Adding...") : (isEditMode ? "Update Student" : "Add Student")}
               </Button>
             </DialogFooter>
           </DialogContent>
