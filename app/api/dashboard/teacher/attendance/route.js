@@ -29,6 +29,11 @@ export async function GET(req) {
         id: true,
         fullName: true,
         studentId: true,
+        user: {
+          select: {
+            image: true,
+          }
+        }
       },
     });
 
@@ -185,6 +190,8 @@ export async function POST(req) {
     const savedRecords = [];
     for (const record of attendanceData) {
       const studentDbId = studentMap[record.studentId];
+      const student = studentsInDB.find(s => s.id === studentDbId);
+
 
       // Create attendance
       const attendance = await prisma.attendance.create({
@@ -202,6 +209,19 @@ export async function POST(req) {
         where: { id: studentDbId },
         data: { classId: classRecord.id },
       });
+
+      if ((record.status || "ABSENT") === "ABSENT") {
+        await prisma.notification.create({
+          data: {
+            userId: student.userId,  // link to User
+            message: `${student.fullName} was absent today.`,  // short message
+            read: false,
+            type: "ATTENDANCE",       // optional
+            check: false,             // optional
+          },
+        });
+      }
+
     }
 
     return new Response(

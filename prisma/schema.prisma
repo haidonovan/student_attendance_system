@@ -181,6 +181,7 @@ model Notification {
   message   String
   read      Boolean  @default(false)
   type      String?
+  check     Boolean
   createdAt DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

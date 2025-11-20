@@ -223,6 +223,8 @@ export default function CheckAttendancePage() {
                 }),
             });
 
+
+
             const data = await response.json();
 
             if (!response.ok) {
@@ -247,6 +249,8 @@ export default function CheckAttendancePage() {
             student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             student.studentId.toLowerCase().includes(searchTerm.toLowerCase())
     )
+
+
 
     const getAttendanceSummary = () => {
         const total = allStudents.length;
@@ -504,13 +508,23 @@ export default function CheckAttendancePage() {
                                 <>
                                     <div className="space-y-3 sm:space-y-4">
                                         {filteredStudents.map((student) => (
+
                                             <div
                                                 key={student.id}
                                                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                                             >
                                                 <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                                                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium text-sm">
-                                                        {student.fullName.charAt(0)}
+                                                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center text-white font-medium text-sm">
+                                                        {student.user.image ? (
+                                                            <img
+                                                                src={student.user.image}
+                                                                alt={student.fullName}
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        ) : (
+                                                            student.fullName.charAt(0)
+                                                        )}
+                                                        {/* profile picture here student */}
                                                     </div>
                                                     <div className="min-w-0 flex-1">
                                                         <h3 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base truncate">

@@ -62,6 +62,7 @@ import SignOutDropdownItem from "./sessionwrapper/signOut/SignOutButton"
 import ProfileDemo from "@/app/dashboard/profile/page"
 import { useState } from "react"
 import { ProfilePopup } from "./userDefine/profile/profle"
+import { NotificationPopup } from "./userDefine/notification/notification"
 
 export function NavUser({
   user
@@ -70,6 +71,9 @@ export function NavUser({
   const router = useRouter();
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [profileData, setProfileData] = useState(null)
+
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
 
   const handleOpenProfile = async () => {
     try {
@@ -198,10 +202,16 @@ export function NavUser({
                 <CreditCard />
                 Billing
               </DropdownMenuItem> */}
-                <DropdownMenuItem>
-                  <Bell />
-                  Notifications
+                <DropdownMenuItem onClick={() => setIsNotifOpen(true)} className="relative flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bell />
+                    <span>Notifications</span>
+                  </div>
+                  {notifications.filter(n => !n.read).length > 0 && (
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+                  )}
                 </DropdownMenuItem>
+
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               {/* <DropdownMenuItem onClick={handleLogout}>
@@ -220,6 +230,12 @@ export function NavUser({
         onClose={() => setIsProfileOpen(false)}
         userProfile={profileData}
       />
+      <NotificationPopup
+        isOpen={isNotifOpen}
+        onClose={() => setIsNotifOpen(false)}
+        notifications={notifications}
+      />
+
     </>
   );
 }
