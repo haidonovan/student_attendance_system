@@ -434,7 +434,7 @@ export default function StudentManagement() {
               <Download className="w-4 h-4 mr-2" />
               Export
             </Button>
-            <input
+            {/* <input
               type="file"
               id="import-file"
               accept=".csv,.xlsx"
@@ -443,7 +443,16 @@ export default function StudentManagement() {
                 const file = e.target.files?.[0]
                 if (file) handleImportStudents(file)
               }}
+            /> */}
+
+            <input
+              type="file"
+              id="import-file"
+              accept=".csv,.xlsx"
+              style={{ display: "none" }}
+              onChange={handleImportStudents} // pass the function directly
             />
+
             <Button
               onClick={() => document.getElementById("import-file")?.click()}
               variant="outline"
