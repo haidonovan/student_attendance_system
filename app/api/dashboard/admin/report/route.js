@@ -5,7 +5,9 @@ export async function GET(req) {
     const cookie = req.headers.get("cookie") || ""
     const match = cookie.match(/sessionToken=([^;]+)/)
     if (!match) {
-      return new Response(JSON.stringify({ error: "No session" }), { status: 401 })
+      return new Response(JSON.stringify({ error: "No session" }), {
+        status: 401,
+      })
     }
 
     const sessionToken = match[1]
@@ -17,473 +19,111 @@ export async function GET(req) {
     })
 
     if (!session || new Date(session.expires) < new Date()) {
-      return new Response(JSON.stringify({ error: "Session expired" }), { status: 401 })
+      return new Response(JSON.stringify({ error: "Session expired" }), {
+        status: 401,
+      })
     }
 
     if (session.user.role !== "ADMIN") {
       return new Response(JSON.stringify({ error: "Unauthorized - Not an admin" }), { status: 403 })
     }
 
-    // Extract query parameters
-    const url = new URL(req.url)
-    const reportId = url.searchParams.get("reportId")
-    const classId = url.searchParams.get("classId")
-    const teacherId = url.searchParams.get("teacherId")
-    const searchTerm = url.searchParams.get("search")
-    const status = url.searchParams.get("status") // approved, pending, rejected, draft
-    const reportType = url.searchParams.get("type") // Monthly, Quarterly, Assessment, etc.
-    const dateFrom = url.searchParams.get("dateFrom")
-    const dateTo = url.searchParams.get("dateTo")
-    const limit = Number.parseInt(url.searchParams.get("limit")) || 50
-    const offset = Number.parseInt(url.searchParams.get("offset")) || 0
+    const { searchParams } = new URL(req.url)
+    const reportType = searchParams.get("type") // "attendance" or "bestStudents"
+    const standbyClassId = searchParams.get("standbyClassId")
 
-    // Fetch specific report with details
-    if (reportId) {
-      const report = await prisma.report.findUnique({
-        where: { id: reportId },
+    if (reportType === "attendance") {
+      const query = {
         include: {
-          class: {
+          attendance: {
+            include: {
+              class: true,
+            },
+          },
+          standbyClass: {
             select: {
               id: true,
               name: true,
               section: true,
-              year: true,
-              teacher: {
-                select: {
-                  id: true,
-                  fullName: true,
-                  subject: true,
-                },
-              },
             },
           },
-          generatedBy: {
+        },
+        orderBy: { fullName: "asc" },
+      }
+
+      if (standbyClassId) {
+        query.where = { standbyClassId }
+      }
+
+      const students = await prisma.student.findMany(query)
+
+      const attendanceReport = students.map((student) => {
+        const totalClasses = student.attendance.length || 1
+        const presentDays = student.attendance.filter((a) => a.status === "PRESENT").length
+        const attendancePercentage = totalClasses > 0 ? Math.round((presentDays / totalClasses) * 100) : 0
+
+        return {
+          studentId: student.studentId,
+          fullName: student.fullName,
+          standbyClass: student.standbyClass?.name || "N/A",
+          totalClasses,
+          presentDays,
+          absentDays: student.attendance.filter((a) => a.status === "ABSENT").length,
+          lateDays: student.attendance.filter((a) => a.status === "LATE").length,
+          attendancePercentage,
+        }
+      })
+
+      return new Response(JSON.stringify({ success: true, data: attendanceReport }), { status: 200 })
+    }
+
+    if (reportType === "bestStudents") {
+      const query = {
+        include: {
+          attendance: true,
+          standbyClass: {
             select: {
               id: true,
               name: true,
-              email: true,
-              image: true,
+              section: true,
             },
           },
         },
-      })
-
-      if (!report) {
-        return new Response(JSON.stringify({ error: "Report not found" }), { status: 404 })
       }
 
-      // Get student count and attendance metrics for the class
-      const students = await prisma.student.findMany({
-        where: { classId: report.classId },
-        include: {
-          attendance: {
-            where: {
-              date: {
-                gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-              },
-            },
-          },
-        },
-      })
-
-      const totalStudents = students.length
-      const avgAttendance =
-        students.length > 0
-          ? Math.round(
-              (students.reduce((sum, s) => {
-                const presentDays = s.attendance.filter((a) => a.status === "PRESENT" || a.status === "LATE").length
-                return sum + (presentDays / (s.attendance.length || 1)) * 100
-              }, 0) /
-                students.length) *
-                100,
-            ) / 100
-          : 0
-
-      const reportDetails = {
-        id: report.id,
-        title: report.title,
-        content: report.content,
-        classId: report.classId,
-        class: report.class,
-        generatedBy: report.generatedBy,
-        createdAt: report.createdAt,
-        status: "approved", // Base status
-        studentCount: totalStudents,
-        avgAttendance,
-        avgGrade: "B+", // Would come from gradebook if available
-        type: "Monthly", // Inferred from content or metadata
-        submittedDate: report.createdAt,
-        approvedDate: report.createdAt,
+      if (standbyClassId) {
+        query.where = { standbyClassId }
       }
 
-      return new Response(JSON.stringify(reportDetails), { status: 200 })
-    }
+      const students = await prisma.student.findMany(query)
 
-    // Build filter object for reports
-    const whereFilter = {}
+      const bestStudents = students
+        .map((student) => {
+          const totalClasses = student.attendance.length || 1
+          const presentDays = student.attendance.filter((a) => a.status === "PRESENT").length
+          const attendancePercentage = totalClasses > 0 ? Math.round((presentDays / totalClasses) * 100) : 0
 
-    if (classId) {
-      whereFilter.classId = classId
-    }
-
-    if (teacherId) {
-      whereFilter.class = {
-        teacherId,
-      }
-    }
-
-    if (searchTerm) {
-      whereFilter.OR = [
-        { title: { contains: searchTerm, mode: "insensitive" } },
-        { content: { contains: searchTerm, mode: "insensitive" } },
-        { generatedBy: { name: { contains: searchTerm, mode: "insensitive" } } },
-        { class: { name: { contains: searchTerm, mode: "insensitive" } } },
-      ]
-    }
-
-    if (dateFrom || dateTo) {
-      whereFilter.createdAt = {}
-      if (dateFrom) {
-        whereFilter.createdAt.gte = new Date(dateFrom)
-      }
-      if (dateTo) {
-        whereFilter.createdAt.lte = new Date(dateTo)
-      }
-    }
-
-    // Fetch all reports
-    const reports = await prisma.report.findMany({
-      where: whereFilter,
-      include: {
-        class: {
-          select: {
-            id: true,
-            name: true,
-            section: true,
-            year: true,
-            teacher: {
-              select: {
-                id: true,
-                fullName: true,
-                subject: true,
-              },
-            },
-          },
-        },
-        generatedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          },
-        },
-      },
-      take: limit,
-      skip: offset,
-      orderBy: {
-        createdAt: "desc",
-      },
-    })
-
-    // Get total count for pagination
-    const totalCount = await prisma.report.count({
-      where: whereFilter,
-    })
-
-    // Enhance reports with metrics
-    const reportsWithStats = await Promise.all(
-      reports.map(async (report) => {
-        const students = await prisma.student.findMany({
-          where: { classId: report.classId },
-          include: {
-            attendance: {
-              where: {
-                date: {
-                  gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-                },
-              },
-            },
-          },
+          return {
+            studentId: student.studentId,
+            fullName: student.fullName,
+            standbyClass: student.standbyClass?.name || "N/A",
+            attendancePercentage,
+            totalClasses,
+            presentDays,
+          }
         })
+        .filter((s) => s.attendancePercentage >= 80) // Only 80% and above
+        .sort((a, b) => b.attendancePercentage - a.attendancePercentage)
+        .slice(0, 20) // Top 20
 
-        const totalStudents = students.length
-        const presentCount = students.reduce(
-          (sum, s) => sum + s.attendance.filter((a) => a.status === "PRESENT" || a.status === "LATE").length,
-          0,
-        )
-        const avgAttendance = totalStudents > 0 ? Math.round((presentCount / (totalStudents * 20)) * 100) : 0
-
-        return {
-          id: report.id,
-          title: report.title,
-          class: report.class?.name,
-          section: report.class?.section,
-          year: report.class?.year,
-          teacher: report.generatedBy?.name,
-          teacherSubject: report.class?.teacher?.subject,
-          students: totalStudents,
-          avgAttendance: Math.min(avgAttendance, 100),
-          avgGrade: "B+",
-          status: report.content?.toLowerCase().includes("rejected") ? "rejected" : "approved",
-          type: "Monthly",
-          submittedDate: report.createdAt,
-          approvedDate: report.createdAt,
-          createdAt: report.createdAt,
-          content: report.content?.substring(0, 150) + (report.content?.length > 150 ? "..." : ""),
-        }
-      }),
-    )
-
-    // Get statistics
-    const allReports = await prisma.report.count()
-    const thisMonthReports = await prisma.report.count({
-      where: {
-        createdAt: {
-          gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-        },
-      },
-    })
-
-    const thisWeekReports = await prisma.report.count({
-      where: {
-        createdAt: {
-          gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        },
-      },
-    })
-
-    const stats = {
-      totalReports: allReports,
-      thisMonthReports,
-      thisWeekReports,
-      approvedReports: Math.round(allReports * 0.84),
-      pendingReports: Math.round(allReports * 0.1),
-      rejectedReports: Math.round(allReports * 0.06),
-      draftReports: 0,
-      averageApprovalRate: 84,
+      return new Response(JSON.stringify({ success: true, data: bestStudents }), { status: 200 })
     }
 
-    const allReportsResponse = {
-      admin: {
-        id: session.user.id,
-        name: session.user.name,
-        email: session.user.email,
-        role: session.user.role,
-      },
-      stats,
-      reports: reportsWithStats,
-      pagination: {
-        limit,
-        offset,
-        hasMore: offset + limit < totalCount,
-        totalCount,
-      },
-    }
-
-    return new Response(JSON.stringify(allReportsResponse), { status: 200 })
+    return new Response(JSON.stringify({ error: "Invalid report type" }), { status: 400 })
   } catch (err) {
-    console.error(err)
-    return new Response(JSON.stringify({ error: "Internal error" }), { status: 500 })
-  }
-}
-
-export async function POST(req) {
-  try {
-    const cookie = req.headers.get("cookie") || ""
-    const match = cookie.match(/sessionToken=([^;]+)/)
-    if (!match) {
-      return new Response(JSON.stringify({ error: "No session" }), { status: 401 })
-    }
-
-    const sessionToken = match[1]
-
-    // Verify session and get user
-    const session = await prisma.session.findUnique({
-      where: { sessionToken },
-      include: { user: true },
+    console.error("[v0] GET report error:", err)
+    return new Response(JSON.stringify({ error: "Failed to fetch report" }), {
+      status: 500,
     })
-
-    if (!session || new Date(session.expires) < new Date()) {
-      return new Response(JSON.stringify({ error: "Session expired" }), { status: 401 })
-    }
-
-    if (session.user.role !== "ADMIN") {
-      return new Response(JSON.stringify({ error: "Unauthorized - Not an admin" }), { status: 403 })
-    }
-
-    const body = await req.json()
-    const { title, content, classId } = body
-
-    // Validate required fields
-    if (!title || !classId) {
-      return new Response(JSON.stringify({ error: "Title and classId are required" }), { status: 400 })
-    }
-
-    // Verify class exists
-    const classExists = await prisma.class.findUnique({
-      where: { id: classId },
-    })
-
-    if (!classExists) {
-      return new Response(JSON.stringify({ error: "Class not found" }), { status: 404 })
-    }
-
-    // Create new report
-    const newReport = await prisma.report.create({
-      data: {
-        title,
-        content: content || "",
-        classId,
-        generatedById: session.user.id,
-      },
-      include: {
-        class: {
-          select: {
-            id: true,
-            name: true,
-            section: true,
-            year: true,
-          },
-        },
-        generatedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    })
-
-    return new Response(JSON.stringify({ success: true, report: newReport }), { status: 201 })
-  } catch (err) {
-    console.error(err)
-    return new Response(JSON.stringify({ error: "Internal error" }), { status: 500 })
-  }
-}
-
-export async function PUT(req) {
-  try {
-    const cookie = req.headers.get("cookie") || ""
-    const match = cookie.match(/sessionToken=([^;]+)/)
-    if (!match) {
-      return new Response(JSON.stringify({ error: "No session" }), { status: 401 })
-    }
-
-    const sessionToken = match[1]
-
-    // Verify session and get user
-    const session = await prisma.session.findUnique({
-      where: { sessionToken },
-      include: { user: true },
-    })
-
-    if (!session || new Date(session.expires) < new Date()) {
-      return new Response(JSON.stringify({ error: "Session expired" }), { status: 401 })
-    }
-
-    if (session.user.role !== "ADMIN") {
-      return new Response(JSON.stringify({ error: "Unauthorized - Not an admin" }), { status: 403 })
-    }
-
-    const body = await req.json()
-    const { id, title, content, classId } = body
-
-    if (!id) {
-      return new Response(JSON.stringify({ error: "Report ID is required" }), { status: 400 })
-    }
-
-    // Verify report exists
-    const existingReport = await prisma.report.findUnique({
-      where: { id },
-    })
-
-    if (!existingReport) {
-      return new Response(JSON.stringify({ error: "Report not found" }), { status: 404 })
-    }
-
-    // Update report
-    const updatedReport = await prisma.report.update({
-      where: { id },
-      data: {
-        ...(title && { title }),
-        ...(content && { content }),
-        ...(classId && { classId }),
-      },
-      include: {
-        class: {
-          select: {
-            id: true,
-            name: true,
-            section: true,
-          },
-        },
-        generatedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    })
-
-    return new Response(JSON.stringify({ success: true, report: updatedReport }), { status: 200 })
-  } catch (err) {
-    console.error(err)
-    return new Response(JSON.stringify({ error: "Internal error" }), { status: 500 })
-  }
-}
-
-export async function DELETE(req) {
-  try {
-    const cookie = req.headers.get("cookie") || ""
-    const match = cookie.match(/sessionToken=([^;]+)/)
-    if (!match) {
-      return new Response(JSON.stringify({ error: "No session" }), { status: 401 })
-    }
-
-    const sessionToken = match[1]
-
-    // Verify session and get user
-    const session = await prisma.session.findUnique({
-      where: { sessionToken },
-      include: { user: true },
-    })
-
-    if (!session || new Date(session.expires) < new Date()) {
-      return new Response(JSON.stringify({ error: "Session expired" }), { status: 401 })
-    }
-
-    if (session.user.role !== "ADMIN") {
-      return new Response(JSON.stringify({ error: "Unauthorized - Not an admin" }), { status: 403 })
-    }
-
-    const url = new URL(req.url)
-    const reportId = url.searchParams.get("reportId")
-
-    if (!reportId) {
-      return new Response(JSON.stringify({ error: "Report ID is required" }), { status: 400 })
-    }
-
-    // Verify report exists
-    const existingReport = await prisma.report.findUnique({
-      where: { id: reportId },
-    })
-
-    if (!existingReport) {
-      return new Response(JSON.stringify({ error: "Report not found" }), { status: 404 })
-    }
-
-    // Delete report
-    await prisma.report.delete({
-      where: { id: reportId },
-    })
-
-    return new Response(JSON.stringify({ success: true, message: "Report deleted successfully" }), { status: 200 })
-  } catch (err) {
-    console.error(err)
-    return new Response(JSON.stringify({ error: "Internal error" }), { status: 500 })
   }
 }
