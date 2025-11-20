@@ -10,9 +10,23 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { Upload } from "lucide-react"
 
 import { useState, useEffect } from "react"
-import { Search, Plus, Download, MoreVertical, Mail, BookOpen, Edit, Trash2, Eye, Users, TrendingUp, Loader2 } from 'lucide-react'
+import {
+  Search,
+  Plus,
+  Download,
+  MoreVertical,
+  Mail,
+  BookOpen,
+  Edit,
+  Trash2,
+  Eye,
+  Users,
+  TrendingUp,
+  Loader2,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -39,6 +53,7 @@ export default function TeacherManagement() {
     totalClasses: 0,
     totalStudents: 0,
   })
+  const [importLoading, setImportLoading] = useState(false)
 
   useEffect(() => {
     fetchTeachers()
@@ -74,10 +89,8 @@ export default function TeacherManagement() {
     try {
       const method = editingTeacherId ? "PUT" : "POST"
       const url = editingTeacherId ? "/api/dashboard/admin/teacher" : "/api/dashboard/admin/teacher"
-      
-      const payload = editingTeacherId 
-        ? { ...formData, id: editingTeacherId }
-        : formData
+
+      const payload = editingTeacherId ? { ...formData, id: editingTeacherId } : formData
 
       const response = await fetch(url, {
         method,
@@ -154,6 +167,116 @@ export default function TeacherManagement() {
     } catch (err) {
       console.error("[v0] Export error:", err)
       setError("Failed to export teachers")
+    }
+  }
+
+  const handleImportTeachers = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Check file type
+    if (!file.name.endsWith(".csv") && !file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
+      setError("Please upload a CSV or Excel file (.csv, .xlsx, .xls)")
+      return
+    }
+
+    setImportLoading(true)
+    try {
+      const reader = new FileReader()
+      reader.onload = async (event) => {
+        try {
+          const rows = []
+
+          if (file.name.endsWith(".csv")) {
+            // Parse CSV
+            const text = event.target?.result
+            const lines = text.split("\n")
+            const headers = lines[0].split(",").map((h) => h.trim().toLowerCase())
+
+            for (let i = 1; i < lines.length; i++) {
+              if (lines[i].trim()) {
+                const values = lines[i].split(",").map((v) => v.trim())
+                rows.push({
+                  fullName: values[headers.indexOf("fullname")] || values[0],
+                  subject: values[headers.indexOf("subject")] || "",
+                  bio: values[headers.indexOf("bio")] || "",
+                  email: values[headers.indexOf("email")] || "",
+                  phoneNumber: values[headers.indexOf("phone")] || values[headers.indexOf("phonenumber")] || "",
+                  address: values[headers.indexOf("address")] || "",
+                  birthDate: values[headers.indexOf("birthdate")] || values[headers.indexOf("birth")] || "",
+                })
+              }
+            }
+          } else {
+            // For Excel files, we'll need xlsx library
+            setError("Excel files require additional setup. Please use CSV format instead.")
+            setImportLoading(false)
+            return
+          }
+
+          // Filter valid rows
+          const validRows = rows.filter((row) => row.fullName?.trim())
+
+          if (validRows.length === 0) {
+            setError("No valid teacher data found in file")
+            setImportLoading(false)
+            return
+          }
+
+          // Import teachers
+          let successCount = 0
+          let failureCount = 0
+          const errors = []
+
+          for (const teacherData of validRows) {
+            try {
+              const response = await fetch("/api/dashboard/admin/teacher", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(teacherData),
+              })
+
+              if (response.ok) {
+                successCount++
+              } else {
+                failureCount++
+                const data = await response.json()
+                errors.push(`${teacherData.fullName}: ${data.error || "Failed to create"}`)
+              }
+            } catch (err) {
+              failureCount++
+              errors.push(`${teacherData.fullName}: ${err.message}`)
+            }
+          }
+
+          // Show results
+          let message = `Import completed: ${successCount} teachers added successfully`
+          if (failureCount > 0) {
+            message += `, ${failureCount} failed`
+            if (errors.length > 0 && errors.length <= 3) {
+              message += `\n\nErrors:\n${errors.join("\n")}`
+            }
+          }
+
+          alert(message)
+
+          // Refresh teachers list
+          await fetchTeachers()
+        } catch (err) {
+          console.error("[v0] Import error:", err)
+          setError(`Import failed: ${err.message}`)
+        } finally {
+          setImportLoading(false)
+        }
+      }
+
+      reader.readAsText(file)
+    } catch (err) {
+      console.error("[v0] File read error:", err)
+      setError("Failed to read file")
+      setImportLoading(false)
     }
   }
 
@@ -258,6 +381,38 @@ export default function TeacherManagement() {
                 <Plus className="h-4 w-4 mr-2" />
                 Add Teacher
               </Button>
+              <div className="relative">
+                <input
+                  type="file"
+                  id="import-teachers"
+                  accept=".csv,.xlsx,.xls"
+                  onChange={handleImportTeachers}
+                  disabled={importLoading}
+                  className="hidden"
+                />
+                <label htmlFor="import-teachers">
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 bg-transparent cursor-pointer"
+                    disabled={importLoading}
+                  >
+                    <span>
+                      {importLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Importing...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Import Teachers
+                        </>
+                      )}
+                    </span>
+                  </Button>
+                </label>
+              </div>
               <Button
                 onClick={handleExportTeachers}
                 variant="outline"
@@ -354,8 +509,8 @@ export default function TeacherManagement() {
                   <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Teacher</th>
                   <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Subject</th>
                   <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Classes</th>
-                  {/* <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Students</th> */}
-                  {/* <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Attendance Rate</th> */}
+                  <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Students</th>
+                  <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Attendance Rate</th>
                   <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">Actions</th>
                 </tr>
               </thead>
@@ -388,15 +543,15 @@ export default function TeacherManagement() {
                       <td className="p-4">
                         <Badge variant="outline">{teacher.classCount || 0} classes</Badge>
                       </td>
-                      {/* <td className="p-4">
+                      <td className="p-4">
                         <div className="flex items-center space-x-2">
                           <Users className="h-4 w-4 text-slate-400" />
                           <span className="font-medium text-slate-900 dark:text-slate-100">
                             {teacher.studentCount || 0}
                           </span>
                         </div>
-                      </td> */}
-                      {/* <td className="p-4">
+                      </td>
+                      <td className="p-4">
                         <div className="flex items-center space-x-2">
                           <div className="w-32 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                             <div
@@ -410,7 +565,7 @@ export default function TeacherManagement() {
                             {teacher.todayAttendanceRate}%
                           </span>
                         </div>
-                      </td> */}
+                      </td>
                       <td className="p-4">
                         <div className="flex items-center space-x-2">
                           <Button
@@ -595,14 +750,14 @@ export default function TeacherManagement() {
       )}
 
       {/* Add/Edit Teacher Modal */}
-      <AddTeacherModal 
-        isOpen={isAddModalOpen} 
+      <AddTeacherModal
+        isOpen={isAddModalOpen}
         onClose={() => {
           setIsAddModalOpen(false)
           setEditingTeacherId(null)
-        }} 
+        }}
         onAdd={handleAddTeacher}
-        editingTeacher={editingTeacherId ? teachers.find(t => t.id === editingTeacherId) : null}
+        editingTeacher={editingTeacherId ? teachers.find((t) => t.id === editingTeacherId) : null}
       />
     </div>
   )
@@ -812,7 +967,9 @@ function AddTeacherModal({ isOpen, onClose, onAdd, editingTeacher }) {
                           />
                         </svg>
                       </div>
-                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Click to upload profile image</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                        Click to upload profile image
+                      </p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">PNG, JPG, GIF up to 10MB</p>
                     </div>
                   )}

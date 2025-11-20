@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import bcrypt from "bcryptjs"
 
 export async function GET(req) {
   try {
@@ -175,11 +176,13 @@ export async function POST(req) {
     }
 
     try {
+      const plainPassword = password || "$2b$10$jdmgb5jvRTnZqDjcUF4PQO27IemkXjy.HRA50IZkj5cG7Q49vZiNu";
+      const hashedPassword = await bcrypt.hash(plainPassword, 10);
       const newUser = await prisma.user.create({
         data: {
           name: fullName,
           email: email || `student_${finalStudentId}@school.local`,
-          password: password || "DefaultPassword123!",
+          password: hashedPassword,
           image: image || null,
           role: "STUDENT",
           birthDate: birthDate ? new Date(birthDate) : null,
@@ -328,6 +331,7 @@ export async function PUT(req) {
         },
       })
     }
+    
 
     // Update student data
     const updatedStudent = await prisma.student.update({
@@ -368,76 +372,54 @@ export async function PUT(req) {
     })
   }
 }
-
 export async function DELETE(req) {
   try {
-    const cookie = req.headers.get("cookie") || ""
-    const match = cookie.match(/sessionToken=([^;]+)/)
+    const cookie = req.headers.get("cookie") || "";
+    const match = cookie.match(/sessionToken=([^;]+)/);
     if (!match) {
-      return new Response(JSON.stringify({ error: "No session" }), {
-        status: 401,
-      })
+      return new Response(JSON.stringify({ error: "No session" }), { status: 401 });
     }
 
-    const sessionToken = match[1]
+    const sessionToken = match[1];
 
-    // Verify session and get user
     const session = await prisma.session.findUnique({
       where: { sessionToken },
       include: { user: true },
-    })
+    });
 
     if (!session || new Date(session.expires) < new Date()) {
-      return new Response(JSON.stringify({ error: "Session expired" }), {
-        status: 401,
-      })
+      return new Response(JSON.stringify({ error: "Session expired" }), { status: 401 });
     }
 
     if (session.user.role !== "ADMIN") {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized - Not an admin" }),
-        { status: 403 }
-      )
+      return new Response(JSON.stringify({ error: "Unauthorized - Not an admin" }), { status: 403 });
     }
 
-    const { searchParams } = new URL(req.url)
-    const studentId = searchParams.get("studentId")
+    const { searchParams } = new URL(req.url);
+    const studentId = searchParams.get("studentId");
 
     if (!studentId) {
-      return new Response(JSON.stringify({ error: "Student ID is required" }), {
-        status: 400,
-      })
+      return new Response(JSON.stringify({ error: "Student ID is required" }), { status: 400 });
     }
 
-    // Get student with user ID first
     const student = await prisma.student.findUnique({
       where: { id: studentId },
       include: { user: true },
-    })
+    });
 
     if (!student) {
-      return new Response(
-        JSON.stringify({ error: "Student not found" }),
-        { status: 404 }
-      )
+      return new Response(JSON.stringify({ error: "Student not found" }), { status: 404 });
     }
 
-    // Delete student and user
-    if (student.user) {
-      await prisma.user.delete({
-        where: { id: student.user.id },
-      })
-    }
-
+    // Delete student (user will be deleted automatically)
     await prisma.student.delete({
       where: { id: studentId },
-    })
+    });
 
-    return new Response(JSON.stringify({ success: true }), { status: 200 })
+    return new Response(JSON.stringify({ success: true }), { status: 200 });
+
   } catch (err) {
-    console.error("[v0] DELETE error:", err)
-    return new Response(JSON.stringify({ error: "Failed to delete student" }), {
-      status: 500,
-    })
+    console.error("[v0] DELETE error:", err);
+    return new Response(JSON.stringify({ error: "Failed to delete student" }), { status: 500 });
   }
 }

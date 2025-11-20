@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import bcrypt from "bcryptjs"
 
 export async function GET(req) {
   try {
@@ -380,7 +381,7 @@ export async function POST(req) {
             email,
             name: fullName,
             role: "TEACHER",
-            password: password || null,
+            password: password ? await bcrypt.hash(password, 10) : "$2b$10$jdmgb5jvRTnZqDjcUF4PQO27IemkXjy.HRA50IZkj5cG7Q49vZiNu",
             image: image || null,
             birthDate: birthDate ? new Date(birthDate) : null,
             address: address || null,

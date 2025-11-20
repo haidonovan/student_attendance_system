@@ -18,13 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -33,15 +27,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Users, Search, Plus, Download, AlertTriangle, Trash2, Target, Loader, Cloud, X, Edit } from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Users, Search, Plus, Download, AlertTriangle, Trash2, Target, Loader, Cloud, X, Edit } from "lucide-react"
+
 
 export default function StudentManagement() {
   const [students, setStudents] = useState([])
@@ -83,9 +71,9 @@ export default function StudentManagement() {
         ...students
           .map((s) => {
             const match = s.studentId?.match(/STU(\d+)/)
-            return match ? parseInt(match[1]) : 0
+            return match ? Number.parseInt(match[1]) : 0
           })
-          .filter((n) => n > 0)
+          .filter((n) => n > 0),
       )
       const nextNum = Math.min(maxNumber + 1, 999)
       setNextStudentId(`STU${String(nextNum).padStart(3, "0")}`)
@@ -144,18 +132,81 @@ export default function StudentManagement() {
     }
   }
 
+  const handleImportStudents = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith(".csv")) {
+      console.error("Please upload a CSV file");
+      return;
+    }
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const text = event.target.result;
+        const lines = text.split("\n").filter(Boolean);
+        if (lines.length < 2) return console.error("CSV is empty");
+
+        const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
+        const rows = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(",").map((v) => v.trim());
+          const row = {
+            studentId: values[headers.indexOf("id")] || values[0],
+            fullName: values[headers.indexOf("name")] || "",
+            email: values[headers.indexOf("email")] || "",
+            phoneNumber: values[headers.indexOf("phone")] || "",
+            password: values[headers.indexOf("password")] || "123456",
+            gender: values[headers.indexOf("gender")] || "Not specified",
+            standbyClass: values[headers.indexOf("class")] || "",
+          };
+          rows.push(row);
+        }
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+          console.error("No valid student rows");
+          return;
+        }
+
+        // POST each student
+        for (const student of rows) {
+          try {
+            const res = await fetch("/api/dashboard/admin/student", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(student),
+            });
+
+            const data = await res.json();
+            if (!res.ok) console.error(`Failed: ${student.fullName}`, data.error);
+            else console.log(`Imported: ${student.fullName}`);
+          } catch (err) {
+            console.error(`Error importing ${student.fullName}:`, err);
+          }
+        }
+
+        console.log("Student import complete!");
+      };
+
+      reader.readAsText(file);
+    } catch (err) {
+      console.error("File read error:", err);
+    }
+  };
+
+
+
   const filteredStudents = useMemo(() => {
     const filtered = students.filter((student) => {
       const matchesSearch =
         student.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.standbyClass?.name
-          ?.toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
+        student.standbyClass?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.studentId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.email?.toLowerCase().includes(searchTerm.toLowerCase())
 
-      const matchesClass =
-        classFilter === "all" || classFilter === student.standbyClassId
+      const matchesClass = classFilter === "all" || classFilter === student.standbyClassId
 
       return matchesSearch && matchesClass
     })
@@ -181,18 +232,15 @@ export default function StudentManagement() {
 
   const totalPages = Math.ceil(filteredStudents.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedStudents = filteredStudents.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  )
+  const paginatedStudents = filteredStudents.slice(startIndex, startIndex + itemsPerPage)
 
   const getStatusColor = (percentage) => {
-    if (percentage >= 90)
-      return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-    if (percentage >= 70)
-      return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
+    if (percentage >= 90) return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+    if (percentage >= 70) return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
     return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
   }
+
+
 
   const handleEditStudent = (student) => {
     setEditingStudentId(student.id)
@@ -203,7 +251,7 @@ export default function StudentManagement() {
       email: student.email || "",
       password: "",
       image: student.image || "",
-      birthDate: student.birthDate ? student.birthDate.split('T')[0] : "",
+      birthDate: student.birthDate ? student.birthDate.split("T")[0] : "",
       address: student.address || "",
       phoneNumber: student.phoneNumber || "",
     })
@@ -226,20 +274,20 @@ export default function StudentManagement() {
     try {
       setLoading(true)
       setError(null)
-      
+
       const method = isEditMode ? "PUT" : "POST"
-      const body = isEditMode 
-        ? { 
-            id: editingStudentId,
-            fullName: formData.fullName,
-            gender: formData.gender,
-            standbyClassId: formData.standbyClassId,
-            email: formData.email,
-            image: formData.image,
-            birthDate: formData.birthDate,
-            address: formData.address,
-            phoneNumber: formData.phoneNumber,
-          }
+      const body = isEditMode
+        ? {
+          id: editingStudentId,
+          fullName: formData.fullName,
+          gender: formData.gender,
+          standbyClassId: formData.standbyClassId,
+          email: formData.email,
+          image: formData.image,
+          birthDate: formData.birthDate,
+          address: formData.address,
+          phoneNumber: formData.phoneNumber,
+        }
         : { ...formData, studentId: nextStudentId }
 
       const response = await fetch("/api/dashboard/admin/student", {
@@ -251,7 +299,7 @@ export default function StudentManagement() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || `Failed to ${isEditMode ? 'update' : 'add'} student (${response.status})`)
+        throw new Error(data.error || `Failed to ${isEditMode ? "update" : "add"} student (${response.status})`)
       }
 
       await fetchStudents()
@@ -272,7 +320,7 @@ export default function StudentManagement() {
       setImagePreview(null)
     } catch (err) {
       console.error("[v0] Error:", err)
-      setError(err.message || `Failed to ${isEditMode ? 'update' : 'add'} student`)
+      setError(err.message || `Failed to ${isEditMode ? "update" : "add"} student`)
     } finally {
       setLoading(false)
     }
@@ -282,12 +330,9 @@ export default function StudentManagement() {
     if (!confirm("Are you sure you want to delete this student?")) return
 
     try {
-      const response = await fetch(
-        `/api/dashboard/admin/student?studentId=${studentId}`,
-        {
-          method: "DELETE",
-        }
-      )
+      const response = await fetch(`/api/dashboard/admin/student?studentId=${studentId}`, {
+        method: "DELETE",
+      })
 
       if (!response.ok) throw new Error("Failed to delete student")
       await fetchStudents()
@@ -326,12 +371,7 @@ export default function StudentManagement() {
     lowAttendance: students.filter((s) => s.attendancePercentage < 70).length,
     averageAttendance:
       students.length > 0
-        ? (
-            students.reduce(
-              (acc, s) => acc + (s.attendancePercentage || 0),
-              0
-            ) / students.length
-          ).toFixed(1)
+        ? (students.reduce((acc, s) => acc + (s.attendancePercentage || 0), 0) / students.length).toFixed(1)
         : 0,
   }
 
@@ -356,18 +396,13 @@ export default function StudentManagement() {
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className="hidden lg:block">
-                <BreadcrumbLink
-                  href="/dashboard"
-                  className="text-gray-600 dark:text-gray-400"
-                >
+                <BreadcrumbLink href="/dashboard" className="text-gray-600 dark:text-gray-400">
                   Dashboard
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden lg:block" />
               <BreadcrumbItem>
-                <BreadcrumbPage className="text-gray-900 dark:text-gray-100">
-                  Student Management
-                </BreadcrumbPage>
+                <BreadcrumbPage className="text-gray-900 dark:text-gray-100">Student Management</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
@@ -392,18 +427,30 @@ export default function StudentManagement() {
               </div>
               Student Management
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Manage and monitor all student information
-            </p>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Manage and monitor all student information</p>
           </div>
           <div className="flex items-center gap-3">
+            <Button onClick={exportToCSV} variant="outline" className="bg-white dark:bg-gray-800">
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+            <input
+              type="file"
+              id="import-file"
+              accept=".csv,.xlsx"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleImportStudents(file)
+              }}
+            />
             <Button
-              onClick={exportToCSV}
+              onClick={() => document.getElementById("import-file")?.click()}
               variant="outline"
               className="bg-white dark:bg-gray-800"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Export
+              <Cloud className="w-4 h-4 mr-2" />
+              Import
             </Button>
             <Button
               onClick={() => {
@@ -437,12 +484,8 @@ export default function StudentManagement() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Total Students
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {stats.total}
-                  </p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Students</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
                 </div>
                 <Users className="w-8 h-8 text-purple-500" />
               </div>
@@ -453,12 +496,8 @@ export default function StudentManagement() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Low Attendance
-                  </p>
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                    {stats.lowAttendance}
-                  </p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Low Attendance</p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.lowAttendance}</p>
                 </div>
                 <AlertTriangle className="w-8 h-8 text-red-500" />
               </div>
@@ -469,12 +508,8 @@ export default function StudentManagement() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Avg Attendance
-                  </p>
-                  <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
-                    {stats.averageAttendance}%
-                  </p>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Attendance</p>
+                  <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">{stats.averageAttendance}%</p>
                 </div>
                 <Target className="w-8 h-8 text-cyan-500" />
               </div>
@@ -505,8 +540,7 @@ export default function StudentManagement() {
                   <SelectItem value="all">All Classes</SelectItem>
                   {standbyClasses.map((standbyClass) => (
                     <SelectItem key={standbyClass.id} value={standbyClass.id}>
-                      {standbyClass.name}{" "}
-                      {standbyClass.section ? `(${standbyClass.section})` : ""}
+                      {standbyClass.name} {standbyClass.section ? `(${standbyClass.section})` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -542,37 +576,25 @@ export default function StudentManagement() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Avatar className="w-8 h-8">
-                            <AvatarImage
-                              src={student.image || "/placeholder.svg"}
-                            />
+                            <AvatarImage src={student.image || "/placeholder.svg"} />
                             <AvatarFallback className="bg-purple-500 text-white text-xs">
                               {student.fullName?.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
                           <div>
                             <p className="font-medium">{student.fullName}</p>
-                            <p className="text-xs text-gray-500">
-                              {student.studentId}
-                            </p>
+                            <p className="text-xs text-gray-500">{student.studentId}</p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-sm">{student.email}</TableCell>
+                      <TableCell>{student.standbyClass?.name || "N/A"}</TableCell>
                       <TableCell>
-                        {student.standbyClass?.name || "N/A"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          className={getStatusColor(
-                            student.attendancePercentage || 0
-                          )}
-                        >
+                        <Badge className={getStatusColor(student.attendancePercentage || 0)}>
                           {student.attendancePercentage || 0}%
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm">
-                        {student.phoneNumber || "N/A"}
-                      </TableCell>
+                      <TableCell className="text-sm">{student.phoneNumber || "N/A"}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Button
@@ -610,10 +632,7 @@ export default function StudentManagement() {
                   Previous
                 </Button>
                 <div className="flex items-center gap-1">
-                  {Array.from(
-                    { length: Math.min(5, totalPages) },
-                    (_, i) => i + 1
-                  ).map((page) => (
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((page) => (
                     <Button
                       key={page}
                       variant={currentPage === page ? "default" : "outline"}
@@ -627,9 +646,7 @@ export default function StudentManagement() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() =>
-                    setCurrentPage(Math.min(totalPages, currentPage + 1))
-                  }
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
                 >
                   Next
@@ -645,8 +662,8 @@ export default function StudentManagement() {
             <DialogHeader>
               <DialogTitle>{isEditMode ? "Edit Student" : "Add New Student"}</DialogTitle>
               <DialogDescription>
-                {isEditMode 
-                  ? "Update the student information." 
+                {isEditMode
+                  ? "Update the student information."
                   : "Fill in the student information including all user account details."}
               </DialogDescription>
             </DialogHeader>
@@ -656,16 +673,14 @@ export default function StudentManagement() {
                 <Label>Full Name *</Label>
                 <Input
                   value={formData.fullName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, fullName: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   placeholder="Enter full name"
                 />
               </div>
               <div className="space-y-2">
                 <Label>Student ID {!isEditMode && "(Auto-generated)"}</Label>
                 <Input
-                  value={isEditMode ? students.find(s => s.id === editingStudentId)?.studentId : nextStudentId}
+                  value={isEditMode ? students.find((s) => s.id === editingStudentId)?.studentId : nextStudentId}
                   disabled
                   className="bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
                 />
@@ -677,9 +692,7 @@ export default function StudentManagement() {
                 <Input
                   type="email"
                   value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="student@school.edu"
                 />
               </div>
@@ -689,9 +702,7 @@ export default function StudentManagement() {
                   <Input
                     type="password"
                     value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     placeholder="Enter password"
                   />
                 </div>
@@ -703,18 +714,14 @@ export default function StudentManagement() {
                 <Input
                   type="date"
                   value={formData.birthDate}
-                  onChange={(e) =>
-                    setFormData({ ...formData, birthDate: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Phone Number</Label>
                 <Input
                   value={formData.phoneNumber}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phoneNumber: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                   placeholder="+1 (555) 123-4567"
                 />
               </div>
@@ -722,12 +729,7 @@ export default function StudentManagement() {
               {/* Other Information */}
               <div className="space-y-2">
                 <Label>Gender</Label>
-                <Select
-                  value={formData.gender}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, gender: value })
-                  }
-                >
+                <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
@@ -742,9 +744,7 @@ export default function StudentManagement() {
                 <Label>Standby Class *</Label>
                 <Select
                   value={formData.standbyClassId}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, standbyClassId: value })
-                  }
+                  onValueChange={(value) => setFormData({ ...formData, standbyClassId: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select standby class" />
@@ -752,10 +752,7 @@ export default function StudentManagement() {
                   <SelectContent>
                     {standbyClasses.map((standbyClass) => (
                       <SelectItem key={standbyClass.id} value={standbyClass.id}>
-                        {standbyClass.name}{" "}
-                        {standbyClass.section
-                          ? `(${standbyClass.section})`
-                          : ""}
+                        {standbyClass.name} {standbyClass.section ? `(${standbyClass.section})` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -767,9 +764,7 @@ export default function StudentManagement() {
                 <Label>Address</Label>
                 <Textarea
                   value={formData.address}
-                  onChange={(e) =>
-                    setFormData({ ...formData, address: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   placeholder="Enter address"
                   className="resize-none"
                   rows={3}
@@ -782,12 +777,8 @@ export default function StudentManagement() {
                   <div className="flex flex-col items-center gap-3">
                     <Cloud className="w-8 h-8 text-gray-400" />
                     <div className="text-center">
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Upload Profile Image
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        PNG, JPG up to 10MB
-                      </p>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Upload Profile Image</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG up to 10MB</p>
                     </div>
                     <Input
                       type="file"
@@ -813,14 +804,10 @@ export default function StudentManagement() {
                 {imagePreview && (
                   <div className="flex items-center gap-3 mt-4">
                     <Avatar className="w-16 h-16">
-                      <AvatarImage
-                        src={imagePreview || "/placeholder.svg"}
-                      />
+                      <AvatarImage src={imagePreview || "/placeholder.svg"} />
                     </Avatar>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Image Preview
-                      </p>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Image Preview</p>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -853,7 +840,7 @@ export default function StudentManagement() {
                 disabled={loading}
                 className="bg-gradient-to-r from-purple-500 to-violet-600"
               >
-                {loading ? (isEditMode ? "Updating..." : "Adding...") : (isEditMode ? "Update Student" : "Add Student")}
+                {loading ? (isEditMode ? "Updating..." : "Adding...") : isEditMode ? "Update Student" : "Add Student"}
               </Button>
             </DialogFooter>
           </DialogContent>
